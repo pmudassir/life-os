@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // URL is configured in prisma.config.ts
+}
+
+// ============================================================================
+// USER
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+
+  dailyRoutines     DailyRoutine[]
+  roadmapTopics     RoadmapTopic[]
+  dailyPlanners     DailyPlanner[]
+  weeklyReflections WeeklyReflection[]
+}
+
+// ============================================================================
+// DAILY ROUTINE
+// ============================================================================
+
+enum DsaType {
+  NONE
+  DSA
+  SYSTEM
+}
+
+model DailyRoutine {
+  id     String   @id @default(cuid())
+  date   DateTime @db.Date
+  userId String
+
+  // Morning - Faith & Discipline
+  fajrDone Boolean @default(false)
+  gymDone  Boolean @default(false)
+
+  // Core Work
+  dsaType       DsaType @default(NONE)
+  workDone      Boolean @default(false)
+  instituteDone Boolean @default(false)
+  freelanceDone Boolean @default(false)
+
+  // Evening
+  readingPages   Int     @default(0)
+  footballDone   Boolean @default(false)
+  allPrayersDone Boolean @default(false)
+
+  // Reflection
+  dayRating Int?    @db.SmallInt // 1-5
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyPlanners DailyPlanner[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// ============================================================================
+// DSA / SYSTEM DESIGN ROADMAP
+// ============================================================================
+
+enum TopicCategory {
+  DSA
+  SYSTEM
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum TopicStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+}
+
+model RoadmapTopic {
+  id         String        @id @default(cuid())
+  userId     String
+  title      String
+  category   TopicCategory
+  difficulty Difficulty
+  phase      Int           @db.SmallInt // 1, 2, or 3
+  status     TopicStatus   @default(NOT_STARTED)
+  notes      String?
+  order      Int           @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planners DailyPlanner[]
+
+  @@index([userId, category, phase])
+}
+
+// ============================================================================
+// DAILY PLANNER (Bridges Roadmap → Daily Execution)
+// ============================================================================
+
+enum PlannedTime {
+  THIRTY     @map("30")
+  FORTY_FIVE @map("45")
+  SIXTY      @map("60")
+}
+
+model DailyPlanner {
+  id     String   @id @default(cuid())
+  date   DateTime @db.Date
+  userId String
+
+  roadmapTopicId String
+  plannedTime    PlannedTime @default(THIRTY)
+  completed      Boolean     @default(false)
+  reflection     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapTopic   RoadmapTopic  @relation(fields: [roadmapTopicId], references: [id], onDelete: Cascade)
+  dailyRoutine   DailyRoutine? @relation(fields: [dailyRoutineId], references: [id])
+  dailyRoutineId String?
+
+  @@unique([userId, date, roadmapTopicId])
+  @@index([userId, date])
+}
+
+// ============================================================================
+// WEEKLY REFLECTION
+// ============================================================================
+
+model WeeklyReflection {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime @db.Date // Always Monday
+
+  wins            String?
+  misses          String?
+  nextWeekFocus   String?
+  faithReflection String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartDate])
+  @@index([userId, weekStartDate])
+}
