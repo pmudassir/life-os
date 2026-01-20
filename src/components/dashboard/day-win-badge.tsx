@@ -28,8 +28,8 @@ export function DayWinBadge({ isWin, size = 'md', className }: DayWinBadgeProps)
         'inline-flex items-center gap-1.5 font-medium rounded-full',
         'transition-all duration-300',
         isWin
-          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+          : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20',
         sizeClasses[size],
         className
       )}

@@ -6,6 +6,9 @@ import { getRoadmapTopics } from '@/actions/roadmap'
 import { TopicCategory, TopicStatus, Difficulty } from '@prisma/client'
 import { cn } from '@/lib/utils'
 
+// Prevent static prerendering - this page needs database access
+export const dynamic = 'force-dynamic'
+
 const difficultyColors: Record<Difficulty, string> = {
   EASY: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   MEDIUM: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',

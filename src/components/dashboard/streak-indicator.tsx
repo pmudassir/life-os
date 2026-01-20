@@ -14,7 +14,7 @@ interface StreakIndicatorProps {
 export function StreakIndicator({ streak, className }: StreakIndicatorProps) {
   if (streak === 0) {
     return (
-      <div className={cn('text-slate-400 dark:text-slate-500 text-sm', className)}>
+      <div className={cn('text-muted-foreground text-sm', className)}>
         Start your streak today
       </div>
     )
@@ -26,12 +26,12 @@ export function StreakIndicator({ streak, className }: StreakIndicatorProps) {
     <div
       className={cn(
         'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
-        'bg-amber-50 dark:bg-amber-900/20',
+        'bg-amber-500/10 border border-amber-500/20',
         className
       )}
     >
       <span className="text-lg">{display}</span>
-      <span className="font-semibold text-amber-700 dark:text-amber-300">
+      <span className="font-semibold text-amber-700 dark:text-amber-400">
         {streak} day{streak !== 1 ? 's' : ''} streak
       </span>
     </div>

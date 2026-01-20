@@ -7,6 +7,9 @@ import { getWeekStart, getWeekEnd, getWeekDays, formatWeekRange } from '@/lib/ut
 import { calculateStreak } from '@/lib/utils/streak'
 import { isToday, isSameDay, isFuture } from 'date-fns'
 
+// Prevent static prerendering - this page needs database access
+export const dynamic = 'force-dynamic'
+
 export default async function WeekPage() {
   const weekStart = getWeekStart()
   const weekEnd = getWeekEnd()

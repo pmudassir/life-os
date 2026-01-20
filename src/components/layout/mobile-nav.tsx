@@ -4,45 +4,53 @@ import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Home, Calendar, AlertCircle, Map, BookOpen } from 'lucide-react'
+import { Calendar, AlertCircle, Map, LayoutGrid } from 'lucide-react'
 
 const navItems = [
-  { href: '/', icon: Home, label: 'Today' },
+  { href: '/', icon: LayoutGrid, label: 'Today' },
   { href: '/week', icon: Calendar, label: 'Week' },
   { href: '/missed', icon: AlertCircle, label: 'Missed' },
   { href: '/roadmap', icon: Map, label: 'Roadmap' },
 ]
 
 /**
- * Mobile-first bottom navigation
- * Fixed at bottom, always accessible
+ * Premium Mobile Navigation
+ * Floating glass dock concept
  */
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-area-inset-bottom">
-      <div className="flex items-center justify-around h-16">
-        {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href
+    <nav className="fixed bottom-6 left-4 right-4 z-50">
+      <div className="glass rounded-2xl shadow-lg shadow-black/5 dark:shadow-black/20 mx-auto max-w-md">
+        <div className="flex items-center justify-around h-16 px-2">
+          {navItems.map(({ href, icon: Icon, label }) => {
+            const isActive = pathname === href
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full',
-                'transition-colors duration-200',
-                isActive
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              )}
-            >
-              <Icon className={cn('h-5 w-5', isActive && 'scale-110')} />
-              <span className="text-xs mt-1 font-medium">{label}</span>
-            </Link>
-          )
-        })}
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'relative flex flex-col items-center justify-center flex-1 h-full rounded-xl transition-all duration-300',
+                  isActive 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground hover:text-primary hover:bg-secondary/50'
+                )}
+              >
+                <div className={cn(
+                  "p-1.5 rounded-xl transition-all duration-300",
+                  isActive && "bg-secondary"
+                )}>
+                  <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.5px]')} />
+                </div>
+                {isActive && (
+                  <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary" />
+                )}
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )

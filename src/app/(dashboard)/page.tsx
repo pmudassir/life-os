@@ -4,6 +4,9 @@ import { getTodayPlanner } from '@/actions/planner'
 import { calculateStreak } from '@/lib/utils/streak'
 import { getToday } from '@/lib/utils/date'
 
+// Prevent static prerendering - this page needs database access
+export const dynamic = 'force-dynamic'
+
 export default async function TodayPage() {
   // Fetch all data in parallel
   const [routine, planner, recentRoutines] = await Promise.all([

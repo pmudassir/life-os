@@ -3,6 +3,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getMissedDays } from '@/actions/routine'
 import { format } from 'date-fns'
 
+// Prevent static prerendering - this page needs database access
+export const dynamic = 'force-dynamic'
+
 export default async function MissedPage() {
   const missedDays = await getMissedDays(30)
 
