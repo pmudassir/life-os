@@ -2,18 +2,16 @@
 
 import * as React from 'react'
 import { useOptimistic, useTransition, useState, useEffect } from 'react'
-import { Header } from '@/components/layout/header'
-import { RoutineItem } from '@/components/routine/routine-item'
-import { Card, CardContent } from '@/components/ui/card'
 import { updateRoutineField } from '@/actions/routine'
 import { formatDisplayDate } from '@/lib/utils/date'
 import { isDayWin } from '@/lib/utils/day-win'
 import { DsaType } from '@prisma/client'
 import { cn } from '@/lib/utils'
-import { Moon, Sunrise, Dumbbell, Laptop, GraduationCap, Book } from 'lucide-react'
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/motion'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { CheckCircle2, Moon, Dumbbell, Laptop, Trophy } from 'lucide-react'
 import type { DailyRoutineWithDayWin, DailyPlannerWithTopic } from '@/types'
 
-// ... existing interfaces ...
 interface TodayClientProps {
   initialRoutine: DailyRoutineWithDayWin
   initialPlanner: DailyPlannerWithTopic | null
@@ -21,17 +19,7 @@ interface TodayClientProps {
   currentDate: Date
 }
 
-type RoutineField = 
-  | 'fajrDone' 
-  | 'gymDone' 
-  | 'workDone' 
-  | 'instituteDone' 
-  | 'freelanceDone' 
-  | 'footballDone' 
-  | 'allPrayersDone'
-  | 'readingPages'
-  | 'dsaType'
-  | 'dayRating'
+type RoutineField = keyof DailyRoutineWithDayWin
 
 export function TodayClient({
   initialRoutine,
@@ -43,14 +31,12 @@ export function TodayClient({
   const [isPending, startTransition] = useTransition()
   /* eslint-enable @typescript-eslint/no-unused-vars */
   const [greeting, setGreeting] = useState('')
+  
   const [optimisticRoutine, setOptimisticRoutine] = useOptimistic(
     initialRoutine,
     (state, update: Partial<DailyRoutineWithDayWin>) => {
       const newState = { ...state, ...update }
-      return {
-        ...newState,
-        dayWin: isDayWin(newState),
-      }
+      return { ...newState, dayWin: isDayWin(newState) }
     }
   )
 
@@ -61,19 +47,15 @@ export function TodayClient({
     else setGreeting('Good evening')
   }, [])
 
-  const handleToggle = (field: RoutineField, value: boolean | number | DsaType | null) => {
+  const handleToggle = (field: string, value: any) => {
     startTransition(async () => {
-      setOptimisticRoutine({ [field]: value })
-      await updateRoutineField(field, value)
+      setOptimisticRoutine({ [field]: value } as any)
+      await updateRoutineField(field as any, value)
     })
   }
 
-  const handleBooleanToggle = (field: RoutineField) => (checked: boolean) => {
-    handleToggle(field, checked)
-  }
-
-  // Calculate progress for the subtle ring or bar
-  const totalTasks = 8 // Hardcoded for this specific user persona
+  // Calculate Progress
+  const totalTasks = 8
   const completedTasks = [
     optimisticRoutine.fajrDone,
     optimisticRoutine.allPrayersDone,
@@ -84,250 +66,230 @@ export function TodayClient({
     optimisticRoutine.freelanceDone,
     optimisticRoutine.readingPages > 0
   ].filter(Boolean).length
-  
-  const progressPercentage = Math.round((completedTasks / totalTasks) * 100)
+  const progress = Math.round((completedTasks / totalTasks) * 100)
 
   return (
-    <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-      {/* Premium Header Section */}
-      <div className="relative">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1 tracking-wide uppercase">
-              {formatDisplayDate(currentDate)}
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {greeting}
-            </h1>
-          </div>
-          
-          {/* Subtle Progress Indicator */}
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl font-bold font-mono">
-                {progressPercentage}%
-              </span>
-            </div>
-            <div className="h-1.5 w-24 bg-secondary rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
+    <div className="h-full flex flex-col gap-6">
+      {/* Header Section */}
+      <FadeIn className="flex items-end justify-between px-1">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">
+            {formatDisplayDate(currentDate)}
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {greeting}
+          </h1>
         </div>
-      </div>
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-2 mb-1">
+            <span className="text-2xl font-bold font-mono">{progress}%</span>
+          </div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Daily Goal</p>
+        </div>
+      </FadeIn>
 
-      {/* Main Grid Layout - Bento Style */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* FAITH - Large Card */}
-        <BentoCard 
-          title="Faith" 
-          icon={<Moon className="h-4 w-4 text-violet-500" />}
-          className="col-span-1 md:row-span-2 border-l-4 border-l-violet-500/50"
-        >
-          <div className="space-y-3 mt-4">
-            <PremiumCheckItem
-              id="fajr"
-              label="Fajr Prayer"
-              sublabel="Start the day right"
+      {/* Timeline Scroll Area */}
+      <ScrollArea className="flex-1 -mr-4 pr-4">
+        <StaggerContainer className="pb-40 pl-4 border-l-2 border-border/50 ml-4 space-y-10 pt-2">
+          
+          {/* Morning Section */}
+          <TimelineSection 
+            title="Morning Ritual" 
+            time="05:00 - 09:00" 
+            icon={<Moon className="w-4 h-4" />}
+            color="violet"
+            isLast={false}
+          >
+            <TimelineTask 
+              label="Fajr Prayer" 
+              sublabel="Start with specific intent"
               checked={optimisticRoutine.fajrDone}
-              onChange={handleBooleanToggle('fajrDone')}
-              colorClass="text-violet-600 dark:text-violet-400"
+              onChange={(c) => handleToggle('fajrDone', c)}
             />
-            <PremiumCheckItem
-              id="all-prayers"
-              label="5 Prayers"
-              sublabel="Complete connection"
+            <TimelineTask 
+              label="5 Daily Prayers" 
+              sublabel="Focus on connection"
               checked={optimisticRoutine.allPrayersDone}
-              onChange={handleBooleanToggle('allPrayersDone')}
-              colorClass="text-violet-600 dark:text-violet-400"
+              onChange={(c) => handleToggle('allPrayersDone', c)}
             />
-            <div className="mt-6 pt-6 border-t border-border/50">
-               <p className="text-xs text-muted-foreground italic text-center">
-                 "Consistency is more beloved to Allah, even if small."
-               </p>
-            </div>
-          </div>
-        </BentoCard>
+          </TimelineSection>
 
-        {/* WORK - Standard Card */}
-        <BentoCard 
-          title="Deep Work" 
-          icon={<Laptop className="h-4 w-4 text-blue-500" />}
-          className="border-l-4 border-l-blue-500/50"
-        >
-          <div className="space-y-3 mt-4">
-            <PremiumCheckItem
-              id="work"
-              label="Remote Work"
-              sublabel="10:00 AM - 7:00 PM"
+          {/* Deep Work Section */}
+          <TimelineSection 
+            title="Deep Work" 
+            time="10:00 - 18:00" 
+            icon={<Laptop className="w-4 h-4" />}
+            color="blue"
+            isLast={false}
+          >
+            <TimelineTask 
+              label="Remote Work" 
               checked={optimisticRoutine.workDone}
-              onChange={handleBooleanToggle('workDone')}
-              colorClass="text-blue-600 dark:text-blue-400"
+              onChange={(c) => handleToggle('workDone', c)}
             />
-            <PremiumCheckItem
-              id="freelance"
-              label="Freelance"
+            <TimelineTask 
+              label="Freelance Projects" 
               checked={optimisticRoutine.freelanceDone}
-              onChange={handleBooleanToggle('freelanceDone')}
-              colorClass="text-blue-600 dark:text-blue-400"
+              onChange={(c) => handleToggle('freelanceDone', c)}
             />
-          </div>
-        </BentoCard>
+          </TimelineSection>
 
-        {/* DISCIPLINE - Standard Card */}
-        <BentoCard 
-          title="Discipline" 
-          icon={<Dumbbell className="h-4 w-4 text-emerald-500" />}
-          className="border-l-4 border-l-emerald-500/50"
-        >
-          <div className="space-y-3 mt-4">
-            <PremiumCheckItem
-              id="gym"
-              label="Gym Session"
+          {/* Discipline/Evening Section */}
+          <TimelineSection 
+            title="Discipline & Growth" 
+            time="19:00 - 23:00" 
+            icon={<Dumbbell className="w-4 h-4" />}
+            color="emerald"
+            isLast={true}
+          >
+            <TimelineTask 
+              label="Gym Session" 
               checked={optimisticRoutine.gymDone}
-              onChange={handleBooleanToggle('gymDone')}
-              colorClass="text-emerald-600 dark:text-emerald-400"
+              onChange={(c) => handleToggle('gymDone', c)}
             />
-            <PremiumCheckItem
-              id="dsa"
-              label="DSA / System Design"
+            <TimelineTask 
+              label="DSA / System Design" 
               sublabel={initialPlanner?.roadmapTopic?.title ?? 'Daily Topic'}
               checked={optimisticRoutine.dsaType !== DsaType.NONE}
               onChange={(c) => handleToggle('dsaType', c ? DsaType.DSA : DsaType.NONE)}
-              colorClass="text-emerald-600 dark:text-emerald-400"
             />
-          </div>
-        </BentoCard>
-
-        {/* EVENING & INSTITUTE - Horizontal Split */}
-        <BentoCard 
-          title="Evening & Growth" 
-          icon={<Sunrise className="h-4 w-4 text-amber-500" />}
-          className="col-span-1 md:col-span-2 border-l-4 border-l-amber-500/50"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <PremiumCheckItem
-              id="institute"
-              label="Coding Institute"
-              icon={<GraduationCap className="h-4 w-4 opacity-70" />}
+            <TimelineTask 
+              label="Coding Institute" 
               checked={optimisticRoutine.instituteDone}
-              onChange={handleBooleanToggle('instituteDone')}
-              colorClass="text-amber-600 dark:text-amber-400"
+              onChange={(c) => handleToggle('instituteDone', c)}
             />
-            <PremiumCheckItem
-              id="reading"
-              label="Reading"
-              sublabel={`${optimisticRoutine.readingPages} pages`}
-              icon={<Book className="h-4 w-4 opacity-70" />}
+            <TimelineTask 
+              label="Reading" 
+              sublabel={`${optimisticRoutine.readingPages} pages read`}
               checked={optimisticRoutine.readingPages > 0}
               onChange={(c) => handleToggle('readingPages', c ? 10 : 0)}
-              colorClass="text-amber-600 dark:text-amber-400"
             />
-          </div>
-        </BentoCard>
+          </TimelineSection>
 
-      </div>
+          {/* Day Win Goal - Final Node */}
+          <div className="relative pl-8 pb-10">
+            {/* Final Trophy Node */}
+            <div className={cn(
+              "absolute -left-[29px] top-0 w-6 h-6 rounded-full border-4 flex items-center justify-center transition-all z-10",
+              optimisticRoutine.dayWin 
+                ? "bg-emerald-500 border-emerald-500 scale-125" 
+                : "bg-background border-muted scale-100"
+            )}>
+              {optimisticRoutine.dayWin && <Trophy className="w-3 h-3 text-white" />}
+            </div>
 
-      {/* Day Win Status - Premium Banner */}
-      <div 
-        className={cn(
-          "relative overflow-hidden rounded-2xl p-6 transition-all duration-500",
-          optimisticRoutine.dayWin 
-            ? "bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20" 
-            : "bg-secondary/50 border border-border"
-        )}
-      >
-        <div className="flex items-center gap-4">
-          <div className={cn(
-            "h-12 w-12 rounded-full flex items-center justify-center text-2xl bg-background shadow-sm",
-            optimisticRoutine.dayWin ? "animate-bounce" : "opacity-50"
-          )}>
-            {optimisticRoutine.dayWin ? "🔥" : "⏳"}
+            <div className={cn(
+              "p-6 rounded-2xl border transition-all duration-500",
+              optimisticRoutine.dayWin 
+                ? "bg-emerald-500/10 border-emerald-500/20 shadow-lg shadow-emerald-500/10" 
+                : "bg-card/50 border-border/50 border-dashed"
+            )}>
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all shadow-sm",
+                  optimisticRoutine.dayWin ? "bg-emerald-500 text-white animate-bounce" : "bg-secondary text-muted-foreground opacity-50"
+                )}>
+                  {optimisticRoutine.dayWin ? "🔥" : "🏆"}
+                </div>
+                <div>
+                   <h3 className="font-bold text-lg tracking-tight">
+                     {optimisticRoutine.dayWin ? "Day Won!" : "Win the Day"}
+                   </h3>
+                   <p className="text-sm text-muted-foreground">
+                     {optimisticRoutine.dayWin 
+                       ? `Streak: ${initialStreak + 1} days. Amazing work!` 
+                       : "Complete Fajr, all prayers, Gym, and DSA to unlock."}
+                   </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold tracking-tight">
-              {optimisticRoutine.dayWin ? "Day Won!" : "Win the Day"}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {optimisticRoutine.dayWin 
-                ? `Streak: ${initialStreak + 1} days. Keep this momentum.` 
-                : "Complete Prayers, Gym, and DSA to secure the win."}
-            </p>
-          </div>
-        </div>
-      </div>
+
+        </StaggerContainer>
+      </ScrollArea>
+
     </div>
   )
 }
 
-function BentoCard({ children, title, icon, className }: { children: React.ReactNode, title: string, icon: React.ReactNode, className?: string }) {
+function TimelineSection({ 
+  children, 
+  title, 
+  time, 
+  icon, 
+  color,
+  isLast 
+}: { 
+  children: React.ReactNode, 
+  title: string, 
+  time: string, 
+  icon: React.ReactNode,
+  color: 'violet' | 'blue' | 'emerald' | 'amber',
+  isLast: boolean
+}) {
+  const colorClasses = {
+    violet: "border-violet-500 text-violet-500 bg-violet-500/10",
+    blue: "border-blue-500 text-blue-500 bg-blue-500/10",
+    emerald: "border-emerald-500 text-emerald-500 bg-emerald-500/10",
+    amber: "border-amber-500 text-amber-500 bg-amber-500/10",
+  }
+
   return (
-    <Card className={cn("overflow-hidden border-0 shadow-sm bg-card/50 backdrop-blur-sm transition-all hover:bg-card/80", className)}>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-2">
-          {icon}
-          <h3 className="font-semibold text-sm tracking-wide uppercase text-muted-foreground">{title}</h3>
-        </div>
+    <StaggerItem className="relative pl-8">
+      {/* Node */}
+      <div className={cn(
+        "absolute -left-[29px] top-0 w-6 h-6 rounded-full border-4 flex items-center justify-center bg-background z-10 transition-colors",
+        colorClasses[color].split(' ')[0] // Border color
+      )}>
+        <div className={cn("w-2 h-2 rounded-full", colorClasses[color].split(' ')[1].replace('text-', 'bg-'))} />
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-mono">{time}</span>
+      </div>
+      
+      <div className="grid gap-3">
         {children}
-      </CardContent>
-    </Card>
+      </div>
+    </StaggerItem>
   )
 }
 
-function PremiumCheckItem({ 
+function TimelineTask({ 
   label, 
   sublabel, 
-  icon, 
   checked, 
-  onChange, 
-  colorClass 
+  onChange 
 }: { 
-  id: string
-  label: string
-  sublabel?: string
-  icon?: React.ReactNode
-  checked: boolean
-  onChange: (checked: boolean) => void
-  colorClass?: string
+  label: string, 
+  sublabel?: string, 
+  checked: boolean, 
+  onChange: (c: boolean) => void 
 }) {
   return (
     <div 
       onClick={() => onChange(!checked)}
       className={cn(
-        "group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent",
-        checked ? "bg-background shadow-sm border-border/50" : "hover:bg-secondary/50"
+        "group flex items-center justify-between p-4 rounded-xl border transition-all duration-200 cursor-pointer",
+        checked 
+          ? "bg-card/50 border-border opacity-60 hover:opacity-100" 
+          : "bg-card border-border/50 hover:bg-accent/50 hover:border-accent shadow-sm"
       )}
     >
-      <div className="flex items-center gap-3">
-        <div 
-          className={cn(
-            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors duration-300",
-            checked 
-              ? "border-transparent bg-foreground text-background" 
-              : "border-muted-foreground/30 group-hover:border-foreground/50",
-            colorClass && checked && "bg-current"
-          )}
-        >
-           {checked && <div className="h-2.5 w-2.5 bg-background rounded-full" />}
-        </div>
-        <div>
-          <p className={cn(
-            "font-medium text-sm transition-opacity duration-200",
-            checked ? "opacity-100" : "opacity-80"
-          )}>
-            {label}
-          </p>
-          {sublabel && (
-            <p className="text-xs text-muted-foreground">
-              {sublabel}
-            </p>
-          )}
-        </div>
+      <div>
+        <h4 className={cn("font-medium transition-all", checked && "line-through text-muted-foreground")}>{label}</h4>
+        {sublabel && <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>}
       </div>
-      {icon && <div className="text-muted-foreground">{icon}</div>}
+
+      <div className={cn(
+        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+        checked 
+          ? "border-emerald-500 bg-emerald-500 text-white" 
+          : "border-muted-foreground/30 group-hover:border-emerald-500/50"
+      )}>
+        {checked && <CheckCircle2 className="w-4 h-4" />}
+      </div>
     </div>
   )
 }
