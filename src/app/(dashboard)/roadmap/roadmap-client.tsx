@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/ui/motion'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { TopicStatus } from '@prisma/client'
+import { TopicStatus } from '@/types'
 import { Lock } from 'lucide-react'
 
 interface RoadmapClientProps {

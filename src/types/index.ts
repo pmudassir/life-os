@@ -1,4 +1,7 @@
-import { DailyRoutine, RoadmapTopic, DailyPlanner, WeeklyReflection } from '@prisma/client'
+import { DailyRoutine, RoadmapTopic, DailyPlanner, WeeklyReflection, DsaType, TopicStatus, TopicCategory, Difficulty, PlannedTime } from '@prisma/client'
+
+// Re-export enums for client components (to avoid bundling the full Prisma client)
+export { DsaType, TopicStatus, TopicCategory, Difficulty, PlannedTime }
 
 /**
  * Extended DailyRoutine with computed Day Win status
