@@ -11,10 +11,32 @@ import { DsaType } from '@prisma/client'
 const TEMP_USER_ID = 'temp-user-001'
 
 /**
+ * Ensure the temp user exists in the database
+ */
+async function ensureUserExists() {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: TEMP_USER_ID },
+  })
+
+  if (!existingUser) {
+    await prisma.user.create({
+      data: {
+        id: TEMP_USER_ID,
+        email: 'temp@life-os.dev',
+        name: 'Life OS User',
+      },
+    })
+  }
+}
+
+/**
  * Get or create today's routine entry
  */
 export async function getOrCreateTodayRoutine() {
   const today = startOfDay(new Date())
+
+  // Ensure user exists before creating routine
+  await ensureUserExists()
 
   // Try to find existing routine for today
   let routine = await prisma.dailyRoutine.findUnique({
@@ -182,20 +204,28 @@ export async function getMissedDays(limit: number = 30) {
         lt: endDate, // Exclude today
       },
       OR: [
-        { allPrayersDone: false },
+        // Any prayer missed
+        { fajrDone: false },
+        { dhuhrDone: false },
+        { asrDone: false },
+        { maghribDone: false },
+        { ishaDone: false },
         { dsaType: DsaType.NONE },
       ],
     },
     orderBy: { date: 'desc' },
   })
 
-  return routines.map((r) => ({
-    date: r.date,
-    routine: {
-      ...r,
-      dayWin: isDayWin(r),
-    },
-    missingPrayers: !r.allPrayersDone,
-    missingDsa: r.dsaType === DsaType.NONE,
-  }))
+  return routines.map((r) => {
+    const allPrayersDone = r.fajrDone && r.dhuhrDone && r.asrDone && r.maghribDone && r.ishaDone
+    return {
+      date: r.date,
+      routine: {
+        ...r,
+        dayWin: isDayWin(r),
+      },
+      missingPrayers: !allPrayersDone,
+      missingDsa: r.dsaType === DsaType.NONE,
+    }
+  })
 }

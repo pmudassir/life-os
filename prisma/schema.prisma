@@ -42,9 +42,15 @@ model DailyRoutine {
   date   DateTime @db.Date
   userId String
 
-  // Morning - Faith & Discipline
-  fajrDone Boolean @default(false)
-  gymDone  Boolean @default(false)
+  // Daily Prayers (5 times)
+  fajrDone    Boolean @default(false)
+  dhuhrDone   Boolean @default(false)
+  asrDone     Boolean @default(false)
+  maghribDone Boolean @default(false)
+  ishaDone    Boolean @default(false)
+
+  // Fitness
+  gymDone Boolean @default(false)
 
   // Core Work
   dsaType       DsaType @default(NONE)
@@ -52,10 +58,8 @@ model DailyRoutine {
   instituteDone Boolean @default(false)
   freelanceDone Boolean @default(false)
 
-  // Evening
-  readingPages   Int     @default(0)
-  footballDone   Boolean @default(false)
-  allPrayersDone Boolean @default(false)
+  // Evening / Self-improvement
+  readingPages Int @default(0)
 
   // Reflection
   dayRating Int?    @db.SmallInt // 1-5

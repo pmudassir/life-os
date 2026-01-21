@@ -2,6 +2,12 @@ import { DailyRoutine } from '@prisma/client'
 import { isDayWin } from './day-win'
 import { differenceInCalendarDays, subDays, startOfDay } from 'date-fns'
 
+// Type for routine fields needed by isDayWin
+type RoutineForStreak = Pick<DailyRoutine, 
+  'date' | 'fajrDone' | 'dhuhrDone' | 'asrDone' | 'maghribDone' | 'ishaDone' | 
+  'gymDone' | 'dsaType' | 'freelanceDone' | 'readingPages' | 'workDone' | 'instituteDone'
+>
+
 /**
  * Calculates the current streak of consecutive "Day Win" days.
  * 
@@ -14,9 +20,7 @@ import { differenceInCalendarDays, subDays, startOfDay } from 'date-fns'
  * Note: Streaks are visual, not fragile counters. A missed day breaks
  * the streak but doesn't delete history.
  */
-export function calculateStreak(
-  routines: Pick<DailyRoutine, 'date' | 'allPrayersDone' | 'gymDone' | 'dsaType'>[]
-): number {
+export function calculateStreak(routines: RoutineForStreak[]): number {
   if (!routines.length) return 0
 
   // Sort by date descending (most recent first)
@@ -35,7 +39,7 @@ export function calculateStreak(
     if (daysDiff > 1) break
 
     // If this day isn't a win, streak is broken
-    if (!isDayWin(routine)) break
+    if (!isDayWin(routine, routineDate)) break
 
     streak++
     expectedDate = subDays(expectedDate, 1)

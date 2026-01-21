@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useOptimistic, useTransition, useState, useEffect } from 'react'
+import { useOptimistic, useTransition } from 'react'
 import { updateRoutineField } from '@/actions/routine'
 import { formatDisplayDate } from '@/lib/utils/date'
 import { isDayWin } from '@/lib/utils/day-win'
@@ -12,6 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { CheckCircle2, Moon, Dumbbell, Laptop, Trophy } from 'lucide-react'
 import type { DailyRoutineWithDayWin, DailyPlannerWithTopic } from '@/types'
 
+// User configuration
+const USER_NAME = 'Mudassir'
+
 interface TodayClientProps {
   initialRoutine: DailyRoutineWithDayWin
   initialPlanner: DailyPlannerWithTopic | null
@@ -19,7 +22,13 @@ interface TodayClientProps {
   currentDate: Date
 }
 
-type RoutineField = keyof DailyRoutineWithDayWin
+// Get greeting based on time of day
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export function TodayClient({
   initialRoutine,
@@ -27,10 +36,8 @@ export function TodayClient({
   initialStreak,
   currentDate,
 }: TodayClientProps) {
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  const [isPending, startTransition] = useTransition()
-  /* eslint-enable @typescript-eslint/no-unused-vars */
-  const [greeting, setGreeting] = useState('')
+  const [, startTransition] = useTransition()
+  const greeting = `${getGreeting()}, ${USER_NAME}`
   
   const [optimisticRoutine, setOptimisticRoutine] = useOptimistic(
     initialRoutine,
@@ -40,25 +47,24 @@ export function TodayClient({
     }
   )
 
-  useEffect(() => {
-    const hour = new Date().getHours()
-    if (hour < 12) setGreeting('Good morning')
-    else if (hour < 18) setGreeting('Good afternoon')
-    else setGreeting('Good evening')
-  }, [])
+  type RoutineFieldName = 'fajrDone' | 'dhuhrDone' | 'asrDone' | 'maghribDone' | 'ishaDone' | 
+    'gymDone' | 'dsaType' | 'workDone' | 'instituteDone' | 'freelanceDone' | 'readingPages'
 
-  const handleToggle = (field: string, value: any) => {
+  const handleToggle = (field: RoutineFieldName, value: boolean | number | string) => {
     startTransition(async () => {
-      setOptimisticRoutine({ [field]: value } as any)
-      await updateRoutineField(field as any, value)
+      setOptimisticRoutine({ [field]: value } as Partial<DailyRoutineWithDayWin>)
+      await updateRoutineField(field, value)
     })
   }
 
-  // Calculate Progress
-  const totalTasks = 8
+  // Calculate Progress (5 prayers + gym + dsa + work + institute + freelance + reading = 11 tasks)
+  const totalTasks = 11
   const completedTasks = [
     optimisticRoutine.fajrDone,
-    optimisticRoutine.allPrayersDone,
+    optimisticRoutine.dhuhrDone,
+    optimisticRoutine.asrDone,
+    optimisticRoutine.maghribDone,
+    optimisticRoutine.ishaDone,
     optimisticRoutine.gymDone,
     optimisticRoutine.dsaType !== DsaType.NONE,
     optimisticRoutine.workDone,
@@ -67,6 +73,15 @@ export function TodayClient({
     optimisticRoutine.readingPages > 0
   ].filter(Boolean).length
   const progress = Math.round((completedTasks / totalTasks) * 100)
+  
+  // Count completed prayers for display
+  const completedPrayers = [
+    optimisticRoutine.fajrDone,
+    optimisticRoutine.dhuhrDone,
+    optimisticRoutine.asrDone,
+    optimisticRoutine.maghribDone,
+    optimisticRoutine.ishaDone
+  ].filter(Boolean).length
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -92,25 +107,43 @@ export function TodayClient({
       <ScrollArea className="flex-1 -mr-4 pr-4">
         <StaggerContainer className="pb-40 pl-4 border-l-2 border-border/50 ml-4 space-y-10 pt-2">
           
-          {/* Morning Section */}
+          {/* Daily Prayers Section */}
           <TimelineSection 
-            title="Morning Ritual" 
-            time="05:00 - 09:00" 
+            title="Daily Prayers" 
+            time={`${completedPrayers}/5 completed`}
             icon={<Moon className="w-4 h-4" />}
             color="violet"
             isLast={false}
           >
             <TimelineTask 
-              label="Fajr Prayer" 
-              sublabel="Start with specific intent"
+              label="Fajr" 
+              sublabel="Dawn prayer (~5:30 AM)"
               checked={optimisticRoutine.fajrDone}
               onChange={(c) => handleToggle('fajrDone', c)}
             />
             <TimelineTask 
-              label="5 Daily Prayers" 
-              sublabel="Focus on connection"
-              checked={optimisticRoutine.allPrayersDone}
-              onChange={(c) => handleToggle('allPrayersDone', c)}
+              label="Dhuhr" 
+              sublabel="Midday prayer (~12:30 PM)"
+              checked={optimisticRoutine.dhuhrDone}
+              onChange={(c) => handleToggle('dhuhrDone', c)}
+            />
+            <TimelineTask 
+              label="Asr" 
+              sublabel="Afternoon prayer (~4:00 PM)"
+              checked={optimisticRoutine.asrDone}
+              onChange={(c) => handleToggle('asrDone', c)}
+            />
+            <TimelineTask 
+              label="Maghrib" 
+              sublabel="Sunset prayer (~6:00 PM)"
+              checked={optimisticRoutine.maghribDone}
+              onChange={(c) => handleToggle('maghribDone', c)}
+            />
+            <TimelineTask 
+              label="Isha" 
+              sublabel="Night prayer (~8:00 PM)"
+              checked={optimisticRoutine.ishaDone}
+              onChange={(c) => handleToggle('ishaDone', c)}
             />
           </TimelineSection>
 

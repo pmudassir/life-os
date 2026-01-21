@@ -10,15 +10,19 @@ export const createDailyRoutineSchema = z.object({
 })
 
 export const updateDailyRoutineSchema = z.object({
+  // Prayers
   fajrDone: z.boolean().optional(),
+  dhuhrDone: z.boolean().optional(),
+  asrDone: z.boolean().optional(),
+  maghribDone: z.boolean().optional(),
+  ishaDone: z.boolean().optional(),
+  // Fitness & Work
   gymDone: z.boolean().optional(),
   dsaType: z.nativeEnum(DsaType).optional(),
   workDone: z.boolean().optional(),
   instituteDone: z.boolean().optional(),
   freelanceDone: z.boolean().optional(),
   readingPages: z.number().int().min(0).optional(),
-  footballDone: z.boolean().optional(),
-  allPrayersDone: z.boolean().optional(),
   dayRating: z.number().int().min(1).max(5).optional().nullable(),
   notes: z.string().optional().nullable(),
 })
