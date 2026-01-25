@@ -9,6 +9,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/motion'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CheckCircle2, Moon, Sun, CloudSun, Sunset, Laptop, Briefcase, Dumbbell, School, Trophy, Circle } from 'lucide-react'
 import { HabitManager } from '@/components/habits/habit-manager'
+import { toggleHabit } from '@/actions/habit'
 import { Habit } from '@prisma/client'
 
 // Mapping icon names to components
@@ -110,7 +111,6 @@ export function TodayClient({
                 title={sectionName}
                 time={`${habits.filter(h => h.completed).length}/${habits.length}`}
                 color={idx % 2 === 0 ? "violet" : "blue"}
-                isLast={false}
              >
                 {habits.map((habit) => (
                     <TimelineTask
@@ -181,7 +181,6 @@ function TimelineSection({
   title: string, 
   time: string, 
   color: 'violet' | 'blue' | 'emerald' | 'amber',
-  isLast: boolean
 }) {
   const colorClasses = {
     violet: "bg-violet-500",
@@ -219,10 +218,10 @@ function TimelineTask({
   icon 
 }: { 
   label: string, 
-  sublabel?: string, 
+  sublabel?: string | null, 
   checked: boolean, 
   onChange: (c: boolean) => void,
-  icon?: string
+  icon?: string | null
 }) {
   const Icon = (icon && IconMap[icon]) || Circle
 

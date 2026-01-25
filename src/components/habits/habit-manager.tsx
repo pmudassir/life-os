@@ -20,6 +20,21 @@ import { FrequencyType } from '@prisma/client'
 export function HabitManager() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  
+  const handleMigrate = async () => {
+    if(!confirm("Migrate legacy data? This will create habits from your old routine schema.")) return
+    setMigrating(true)
+    try {
+        const res = await migrateLegacyData()
+        alert(`Migration complete! Processed ${res.count} records.`)
+        setOpen(false)
+    } catch(e) {
+        alert("Migration failed: " + e)
+    } finally {
+        setMigrating(false)
+    }
+  }
   
   // Form State
   const [title, setTitle] = useState('')
