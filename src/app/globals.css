@@ -1,76 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  /* Premium Light Mode */
-  --background: #fafafa; /* Zinc-50 */
-  --foreground: #18181b; /* Zinc-900 */
+  /* Kawkab Design System Tokens */
+  --kawkab-off-white: #F7F7F7;
+  --kawkab-black: #000000;
+  --kawkab-gray: #858585;
+  --kawkab-stroke: #EDEDED;
+  --kawkab-accent: #C4F041; /* Example accent, can be adjusted */
+
+  /* Mapping to Semantic Names for compatibility if needed, but primarily using Kawkab vars */
+  --background: var(--kawkab-off-white);
+  --foreground: var(--kawkab-black);
   
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: var(--kawkab-black);
   
   --popover: #ffffff;
-  --popover-foreground: #18181b;
+  --popover-foreground: var(--kawkab-black);
   
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
+  --primary: var(--kawkab-black);
+  --primary-foreground: #ffffff;
   
-  --secondary: #f4f4f5; /* Zinc-100 */
-  --secondary-foreground: #18181b;
+  --secondary: var(--kawkab-stroke);
+  --secondary-foreground: var(--kawkab-black);
   
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a; /* Zinc-500 */
+  --muted: var(--kawkab-off-white);
+  --muted-foreground: var(--kawkab-gray);
   
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  --accent: var(--kawkab-accent);
+  --accent-foreground: var(--kawkab-black);
   
   --destructive: #ef4444;
   --destructive-foreground: #fafafa;
 
-  --border: #e4e4e7; /* Zinc-200 */
-  --input: #e4e4e7;
-  --ring: #18181b;
+  --border: var(--kawkab-stroke);
+  --input: var(--kawkab-stroke);
+  --ring: var(--kawkab-black);
   
-  /* Status Colors (Subtle/Premium) */
-  --color-faith: #8b5cf6; /* Violet-500 */
-  --color-discipline: #10b981; /* Emerald-500 */
-  --color-work: #3b82f6; /* Blue-500 */
-  --color-evening: #f59e0b; /* Amber-500 */
-  
-  --radius: 0.75rem;
-  --touch-min: 44px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Premium Dark Mode */
-    --background: #09090b; /* Zinc-950 */
-    --foreground: #fafafa; /* Zinc-50 */
-    
-    --card: #18181b; /* Zinc-900 */
-    --card-foreground: #fafafa;
-    
-    --popover: #18181b;
-    --popover-foreground: #fafafa;
-    
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
-    
-    --secondary: #27272a; /* Zinc-800 */
-    --secondary-foreground: #fafafa;
-    
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa; /* Zinc-400 */
-    
-    --accent: #27272a;
-    --accent-foreground: #fafafa;
-    
-    --destructive: #7f1d1d;
-    --destructive-foreground: #fafafa;
-    
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #d4d4d8;
-  }
+  --radius: 0.75rem; /* Base radius, but we use specific large radii for cards */
 }
 
 @theme inline {
@@ -93,12 +60,20 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  
+  --color-kawkab-off-white: var(--kawkab-off-white);
+  --color-kawkab-black: var(--kawkab-black);
+  --color-kawkab-gray: var(--kawkab-gray);
+  --color-kawkab-stroke: var(--kawkab-stroke);
+  --color-kawkab-accent: var(--kawkab-accent);
+
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: calc(var(--radius));
   --radius-lg: calc(var(--radius) + 2px);
+  --radius-4xl: 2.5rem;
+  --radius-5xl: 3rem;
   
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
 body {
@@ -109,7 +84,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glassmorphism Utilities */
+/* Glassmorphism Utilities - Updated for Kawkab if needed, but keeping basic */
 .glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
@@ -117,23 +92,14 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.dark .glass {
-  background: rgba(24, 24, 27, 0.7); /* Zinc-900 with opacity */
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+/* Utility for Kawkab Card Hover Effect */
+.kawkab-card-hover {
+  transition: all 0.5s ease;
+}
+.kawkab-card-hover:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: translateY(-4px);
+  border-color: transparent;
+  background-color: white;
 }
 
-/* Custom Checkbox Animation */
-@keyframes check-bounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-
-.animate-check {
-  animation: check-bounce 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Safe area for mobile bottom navigation */
-.safe-area-inset-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}

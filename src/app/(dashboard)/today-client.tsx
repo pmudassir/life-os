@@ -1,28 +1,29 @@
 'use client'
 
 import * as React from 'react'
-import { useOptimistic, useTransition } from 'react'
-import { updateRoutineField } from '@/actions/routine'
+import { useOptimistic, useTransition, useEffect } from 'react'
 import { formatDisplayDate } from '@/lib/utils/date'
-import { isDayWin } from '@/lib/utils/day-win'
-import { DsaType } from '@/types'
+
 import { cn } from '@/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/motion'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CheckCircle2, Moon, Dumbbell, Laptop, Trophy } from 'lucide-react'
-import type { DailyRoutineWithDayWin, DailyPlannerWithTopic } from '@/types'
+import { CheckCircle2, Moon, Sun, CloudSun, Sunset, Laptop, Briefcase, Dumbbell, School, Trophy, Circle } from 'lucide-react'
+import { HabitManager } from '@/components/habits/habit-manager'
+import { Habit } from '@prisma/client'
 
-// User configuration
-const USER_NAME = 'Mudassir'
+// Mapping icon names to components
+const IconMap: Record<string, React.ElementType> = {
+  Moon, Sun, CloudSun, Sunset, Laptop, Briefcase, Dumbbell, School, Circle, Trophy
+}
+
+type HabitWithCompletion = Habit & { completed: boolean }
 
 interface TodayClientProps {
-  initialRoutine: DailyRoutineWithDayWin
-  initialPlanner: DailyPlannerWithTopic | null
+  initialHabits: HabitWithCompletion[]
   initialStreak: number
   currentDate: Date
 }
 
-// Get greeting based on time of day
 function getGreeting(): string {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning'
@@ -31,207 +32,132 @@ function getGreeting(): string {
 }
 
 export function TodayClient({
-  initialRoutine,
-  initialPlanner,
+  initialHabits,
   initialStreak,
   currentDate,
 }: TodayClientProps) {
   const [, startTransition] = useTransition()
-  const greeting = `${getGreeting()}, ${USER_NAME}`
+  const greeting = `${getGreeting()}, Mudassir`
   
-  const [optimisticRoutine, setOptimisticRoutine] = useOptimistic(
-    initialRoutine,
-    (state, update: Partial<DailyRoutineWithDayWin>) => {
-      const newState = { ...state, ...update }
-      return { ...newState, dayWin: isDayWin(newState) }
+  const [optimisticHabits, setOptimisticHabits] = useOptimistic(
+    initialHabits,
+    (state, { id, completed }: { id: string, completed: boolean }) => {
+      return state.map(h => h.id === id ? { ...h, completed } : h)
     }
   )
 
-  type RoutineFieldName = 'fajrDone' | 'dhuhrDone' | 'asrDone' | 'maghribDone' | 'ishaDone' | 
-    'gymDone' | 'dsaType' | 'workDone' | 'instituteDone' | 'freelanceDone' | 'readingPages'
-
-  const handleToggle = (field: RoutineFieldName, value: boolean | number | string) => {
+  const handleToggle = (id: string, completed: boolean) => {
     startTransition(async () => {
-      setOptimisticRoutine({ [field]: value } as Partial<DailyRoutineWithDayWin>)
-      await updateRoutineField(field, value)
+      setOptimisticHabits({ id, completed })
+      await toggleHabit(id, currentDate, completed)
     })
   }
 
-  // Calculate Progress (5 prayers + gym + dsa + work + institute + freelance + reading = 11 tasks)
-  const totalTasks = 11
-  const completedTasks = [
-    optimisticRoutine.fajrDone,
-    optimisticRoutine.dhuhrDone,
-    optimisticRoutine.asrDone,
-    optimisticRoutine.maghribDone,
-    optimisticRoutine.ishaDone,
-    optimisticRoutine.gymDone,
-    optimisticRoutine.dsaType !== DsaType.NONE,
-    optimisticRoutine.workDone,
-    optimisticRoutine.instituteDone,
-    optimisticRoutine.freelanceDone,
-    optimisticRoutine.readingPages > 0
-  ].filter(Boolean).length
-  const progress = Math.round((completedTasks / totalTasks) * 100)
+  // Calculate Progress
+  const totalTasks = optimisticHabits.length
+  const completedTasks = optimisticHabits.filter(h => h.completed).length
+  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   
-  // Count completed prayers for display
-  const completedPrayers = [
-    optimisticRoutine.fajrDone,
-    optimisticRoutine.dhuhrDone,
-    optimisticRoutine.asrDone,
-    optimisticRoutine.maghribDone,
-    optimisticRoutine.ishaDone
-  ].filter(Boolean).length
+  // Day Win Logic (All habits done)
+  const isDayWon = totalTasks > 0 && completedTasks === totalTasks
+
+  // Group by section
+  const sections = React.useMemo(() => {
+    const groups: Record<string, typeof optimisticHabits> = {}
+    optimisticHabits.forEach(h => {
+      if (!groups[h.section]) groups[h.section] = []
+      groups[h.section].push(h)
+    })
+    return groups
+  }, [optimisticHabits])
+
+  // Notification Check
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission()
+    }
+  }, [])
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="h-full flex flex-col gap-12 pt-12">
       {/* Header Section */}
-      <FadeIn className="flex items-end justify-between px-1">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">
-            {formatDisplayDate(currentDate)}
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {greeting}
-          </h1>
+      <FadeIn className="flex flex-col gap-6 px-2">
+        <div className="flex items-center justify-between">
+            <span className="px-4 py-1.5 rounded-full border border-kawkab-stroke text-xs font-bold uppercase tracking-widest text-kawkab-gray bg-white/50 backdrop-blur-sm">
+                {formatDisplayDate(currentDate)}
+            </span>
+            <div className="flex items-center gap-4">
+                 <HabitManager />
+                 <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold font-mono tracking-tighter">{progress}%</span>
+                      <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Done</span>
+                 </div>
+            </div>
         </div>
-        <div className="text-right">
-          <div className="flex items-center justify-end gap-2 mb-1">
-            <span className="text-2xl font-bold font-mono">{progress}%</span>
-          </div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Daily Goal</p>
-        </div>
+        
+        <h1 className="text-6xl md:text-8xl font-bold tracking-tighter leading-[0.9] text-foreground">
+          {greeting}
+        </h1>
       </FadeIn>
 
       {/* Timeline Scroll Area */}
       <ScrollArea className="flex-1 -mr-4 pr-4">
-        <StaggerContainer className="pb-40 pl-4 border-l-2 border-border/50 ml-4 space-y-10 pt-2">
+        <StaggerContainer className="pb-40 pl-4 border-l border-kawkab-stroke ml-4 space-y-16 pt-4">
           
-          {/* Daily Prayers Section */}
-          <TimelineSection 
-            title="Daily Prayers" 
-            time={`${completedPrayers}/5 completed`}
-            icon={<Moon className="w-4 h-4" />}
-            color="violet"
-            isLast={false}
-          >
-            <TimelineTask 
-              label="Fajr" 
-              sublabel="Dawn prayer (~5:30 AM)"
-              checked={optimisticRoutine.fajrDone}
-              onChange={(c) => handleToggle('fajrDone', c)}
-            />
-            <TimelineTask 
-              label="Dhuhr" 
-              sublabel="Midday prayer (~12:30 PM)"
-              checked={optimisticRoutine.dhuhrDone}
-              onChange={(c) => handleToggle('dhuhrDone', c)}
-            />
-            <TimelineTask 
-              label="Asr" 
-              sublabel="Afternoon prayer (~4:00 PM)"
-              checked={optimisticRoutine.asrDone}
-              onChange={(c) => handleToggle('asrDone', c)}
-            />
-            <TimelineTask 
-              label="Maghrib" 
-              sublabel="Sunset prayer (~6:00 PM)"
-              checked={optimisticRoutine.maghribDone}
-              onChange={(c) => handleToggle('maghribDone', c)}
-            />
-            <TimelineTask 
-              label="Isha" 
-              sublabel="Night prayer (~8:00 PM)"
-              checked={optimisticRoutine.ishaDone}
-              onChange={(c) => handleToggle('ishaDone', c)}
-            />
-          </TimelineSection>
-
-          {/* Deep Work Section */}
-          <TimelineSection 
-            title="Deep Work" 
-            time="10:00 - 18:00" 
-            icon={<Laptop className="w-4 h-4" />}
-            color="blue"
-            isLast={false}
-          >
-            <TimelineTask 
-              label="Remote Work" 
-              checked={optimisticRoutine.workDone}
-              onChange={(c) => handleToggle('workDone', c)}
-            />
-            <TimelineTask 
-              label="Freelance Projects" 
-              checked={optimisticRoutine.freelanceDone}
-              onChange={(c) => handleToggle('freelanceDone', c)}
-            />
-          </TimelineSection>
-
-          {/* Discipline/Evening Section */}
-          <TimelineSection 
-            title="Discipline & Growth" 
-            time="19:00 - 23:00" 
-            icon={<Dumbbell className="w-4 h-4" />}
-            color="emerald"
-            isLast={true}
-          >
-            <TimelineTask 
-              label="Gym Session" 
-              checked={optimisticRoutine.gymDone}
-              onChange={(c) => handleToggle('gymDone', c)}
-            />
-            <TimelineTask 
-              label="DSA / System Design" 
-              sublabel={initialPlanner?.roadmapTopic?.title ?? 'Daily Topic'}
-              checked={optimisticRoutine.dsaType !== DsaType.NONE}
-              onChange={(c) => handleToggle('dsaType', c ? DsaType.DSA : DsaType.NONE)}
-            />
-            <TimelineTask 
-              label="Coding Institute" 
-              checked={optimisticRoutine.instituteDone}
-              onChange={(c) => handleToggle('instituteDone', c)}
-            />
-            <TimelineTask 
-              label="Reading" 
-              sublabel={`${optimisticRoutine.readingPages} pages read`}
-              checked={optimisticRoutine.readingPages > 0}
-              onChange={(c) => handleToggle('readingPages', c ? 10 : 0)}
-            />
-          </TimelineSection>
+          {Object.entries(sections).map(([sectionName, habits], idx) => (
+             <TimelineSection 
+                key={sectionName}
+                title={sectionName}
+                time={`${habits.filter(h => h.completed).length}/${habits.length}`}
+                color={idx % 2 === 0 ? "violet" : "blue"}
+                isLast={false}
+             >
+                {habits.map((habit) => (
+                    <TimelineTask
+                        key={habit.id}
+                        label={habit.title}
+                        sublabel={habit.description}
+                        checked={habit.completed}
+                        onChange={(c) => handleToggle(habit.id, c)}
+                        icon={habit.icon}
+                    />
+                ))}
+             </TimelineSection>
+          ))}
 
           {/* Day Win Goal - Final Node */}
           <div className="relative pl-8 pb-10">
             {/* Final Trophy Node */}
             <div className={cn(
-              "absolute -left-[29px] top-0 w-6 h-6 rounded-full border-4 flex items-center justify-center transition-all z-10",
-              optimisticRoutine.dayWin 
-                ? "bg-emerald-500 border-emerald-500 scale-125" 
-                : "bg-background border-muted scale-100"
+              "absolute -left-[29px] top-0 w-6 h-6 rounded-full border border-kawkab-stroke flex items-center justify-center transition-all z-10 bg-white",
+              isDayWon 
+                ? "bg-kawkab-accent border-transparent scale-125" 
+                : "bg-white border-kawkab-stroke scale-100"
             )}>
-              {optimisticRoutine.dayWin && <Trophy className="w-3 h-3 text-white" />}
+              {isDayWon && <Trophy className="w-3 h-3 text-black" />}
             </div>
 
             <div className={cn(
-              "p-6 rounded-2xl border transition-all duration-500",
-              optimisticRoutine.dayWin 
-                ? "bg-emerald-500/10 border-emerald-500/20 shadow-lg shadow-emerald-500/10" 
-                : "bg-card/50 border-border/50 border-dashed"
+              "p-8 rounded-4xl border transition-all duration-500",
+              isDayWon 
+                ? "bg-kawkab-accent/10 border-kawkab-accent/20 shadow-xl" 
+                : "bg-white/50 border-kawkab-stroke border-dashed"
             )}>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
                 <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all shadow-sm",
-                  optimisticRoutine.dayWin ? "bg-emerald-500 text-white animate-bounce" : "bg-secondary text-muted-foreground opacity-50"
+                  "w-16 h-16 rounded-full flex items-center justify-center text-3xl transition-all shadow-sm border border-kawkab-stroke",
+                  isDayWon ? "bg-kawkab-accent text-black animate-bounce border-transparent" : "bg-white text-muted-foreground opacity-50"
                 )}>
-                  {optimisticRoutine.dayWin ? "🔥" : "🏆"}
+                  {isDayWon ? "🔥" : "🏆"}
                 </div>
                 <div>
-                   <h3 className="font-bold text-lg tracking-tight">
-                     {optimisticRoutine.dayWin ? "Day Won!" : "Win the Day"}
+                   <h3 className="font-bold text-2xl tracking-tight mb-1">
+                     {isDayWon ? "Day Won!" : "Win the Day"}
                    </h3>
-                   <p className="text-sm text-muted-foreground">
-                     {optimisticRoutine.dayWin 
+                   <p className="text-base text-muted-foreground leading-relaxed">
+                     {isDayWon 
                        ? `Streak: ${initialStreak + 1} days. Amazing work!` 
-                       : "Complete Fajr, all prayers, Gym, and DSA to unlock."}
+                       : "Complete all scheduled habits to unlock."}
                    </p>
                 </div>
               </div>
@@ -249,37 +175,33 @@ function TimelineSection({
   children, 
   title, 
   time, 
-  icon, 
   color,
-  isLast 
 }: { 
   children: React.ReactNode, 
   title: string, 
   time: string, 
-  icon: React.ReactNode,
   color: 'violet' | 'blue' | 'emerald' | 'amber',
   isLast: boolean
 }) {
   const colorClasses = {
-    violet: "border-violet-500 text-violet-500 bg-violet-500/10",
-    blue: "border-blue-500 text-blue-500 bg-blue-500/10",
-    emerald: "border-emerald-500 text-emerald-500 bg-emerald-500/10",
-    amber: "border-amber-500 text-amber-500 bg-amber-500/10",
+    violet: "bg-violet-500",
+    blue: "bg-blue-500",
+    emerald: "bg-emerald-500",
+    amber: "bg-amber-500",
   }
 
   return (
     <StaggerItem className="relative pl-8">
       {/* Node */}
       <div className={cn(
-        "absolute -left-[29px] top-0 w-6 h-6 rounded-full border-4 flex items-center justify-center bg-background z-10 transition-colors",
-        colorClasses[color].split(' ')[0] // Border color
-      )}>
-        <div className={cn("w-2 h-2 rounded-full", colorClasses[color].split(' ')[1].replace('text-', 'bg-'))} />
-      </div>
+        "absolute -left-[19px] top-2 w-4 h-4 rounded-full border border-white shadow-sm z-10 transition-colors",
+        colorClasses[color] // Dot color
+      )} />
 
-      <div className="flex items-center gap-3 mb-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-mono">{time}</span>
+      <div className="flex items-center gap-4 mb-6">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{title}</h3>
+        <div className="h-px bg-kawkab-stroke flex-1"></div>
+        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border border-kawkab-stroke text-muted-foreground bg-white">{time}</span>
       </div>
       
       <div className="grid gap-3">
@@ -293,35 +215,44 @@ function TimelineTask({
   label, 
   sublabel, 
   checked, 
-  onChange 
+  onChange,
+  icon 
 }: { 
   label: string, 
   sublabel?: string, 
   checked: boolean, 
-  onChange: (c: boolean) => void 
+  onChange: (c: boolean) => void,
+  icon?: string
 }) {
+  const Icon = (icon && IconMap[icon]) || Circle
+
   return (
     <div 
       onClick={() => onChange(!checked)}
       className={cn(
-        "group flex items-center justify-between p-4 rounded-xl border transition-all duration-200 cursor-pointer",
+        "group flex items-center justify-between p-5 rounded-3xl border transition-all duration-300 cursor-pointer",
         checked 
-          ? "bg-card/50 border-border opacity-60 hover:opacity-100" 
-          : "bg-card border-border/50 hover:bg-accent/50 hover:border-accent shadow-sm"
+          ? "bg-kawkab-off-white border-transparent opacity-50 hover:opacity-100" 
+          : "bg-white border-kawkab-stroke hover:border-kawkab-black hover:shadow-lg hover:-translate-y-0.5"
       )}
     >
-      <div>
-        <h4 className={cn("font-medium transition-all", checked && "line-through text-muted-foreground")}>{label}</h4>
-        {sublabel && <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>}
+      <div className="flex items-center gap-4">
+         <div className={cn("p-2 rounded-full border border-kawkab-stroke text-muted-foreground transition-colors", checked && "bg-transparent border-transparent opacity-0 w-0 p-0 overflow-hidden")}>
+            <Icon className="w-5 h-5" />
+         </div>
+         <div>
+            <h4 className={cn("text-lg font-bold tracking-tight transition-all", checked && "line-through text-muted-foreground")}>{label}</h4>
+            {sublabel && <p className="text-sm text-muted-foreground mt-1 font-medium">{sublabel}</p>}
+         </div>
       </div>
 
       <div className={cn(
-        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+        "w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300",
         checked 
-          ? "border-emerald-500 bg-emerald-500 text-white" 
-          : "border-muted-foreground/30 group-hover:border-emerald-500/50"
+          ? "border-black bg-black text-white" 
+          : "border-kawkab-stroke group-hover:border-black"
       )}>
-        {checked && <CheckCircle2 className="w-4 h-4" />}
+        <CheckCircle2 className={cn("w-5 h-5 transition-transform duration-300", checked ? "scale-100" : "scale-0 opacity-0")} />
       </div>
     </div>
   )
