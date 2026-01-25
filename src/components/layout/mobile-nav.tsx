@@ -22,7 +22,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-6 left-4 right-4 z-50">
-      <div className="glass rounded-2xl shadow-lg shadow-black/5 dark:shadow-black/20 mx-auto max-w-md">
+      <div className="glass rounded-2xl shadow-lg shadow-black/5 mx-auto max-w-md">
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname === href
@@ -31,6 +31,7 @@ export function MobileNav() {
               <Link
                 key={href}
                 href={href}
+                aria-label={label}
                 className={cn(
                   'relative flex flex-col items-center justify-center flex-1 h-full rounded-xl transition-all duration-300',
                   isActive 

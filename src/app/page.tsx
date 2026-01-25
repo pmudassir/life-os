@@ -19,8 +19,8 @@ export default async function HomePage() {
   const streak = calculateStreak(recentRoutines)
 
   return (
-    <div className="min-h-screen bg-kawkab-off-white dark:bg-slate-950">
-      <main className="pb-20 px-4 pt-6 max-w-2xl mx-auto h-screen">
+    <div className="min-h-screen bg-kawkab-off-white">
+      <main className="pb-32 px-4 pt-6 max-w-2xl mx-auto h-screen">
         <TodayClient
           initialHabits={habits}
           initialStreak={streak}

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   /* Kawkab Design System Tokens */
   --kawkab-off-white: #F7F7F7;
   --kawkab-black: #000000;
