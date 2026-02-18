@@ -59,14 +59,10 @@ interface NetworkDashboardProps {
 
 const relationshipColors: Record<string, string> = {
   MENTOR: 'bg-purple-500',
-  mentor: 'bg-purple-500',
-  COLLEAGUE: 'bg-blue-500',
-  colleague: 'bg-blue-500',
-  RECRUITER: 'bg-green-500',
-  recruiter: 'bg-green-500',
-  FRIEND: 'bg-pink-500',
-  friend: 'bg-pink-500',
-  acquaintance: 'bg-gray-400',
+  PEER: 'bg-blue-500',
+  POTENTIAL_CLIENT: 'bg-green-500',
+  COLLABORATOR: 'bg-indigo-500',
+  SPEAKER: 'bg-amber-500',
   OTHER: 'bg-gray-400',
 }
 

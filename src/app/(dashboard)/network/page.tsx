@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { NetworkDashboard } from '@/components/network/network-dashboard'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -104,9 +105,11 @@ export default async function NetworkPage() {
             Manage connections and track conversations
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Contact
+        <Button asChild>
+          <Link href="/network/new">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Contact
+          </Link>
         </Button>
       </div>
 

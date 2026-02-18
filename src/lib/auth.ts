@@ -95,21 +95,47 @@ export async function auth(): Promise<Session | null> {
   return null
 }
 
-async function ensureUserExists(user: User): Promise<void> {
-  await prisma.user.upsert({
+async function ensureUserExists(user: User): Promise<string> {
+  const existingById = await prisma.user.findUnique({
     where: { id: user.id },
-    update: {
-      email: user.email,
-      name: user.name ?? undefined,
-      image: user.image ?? undefined,
-    },
-    create: {
+    select: { id: true },
+  })
+  if (existingById) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: user.name ?? undefined,
+        image: user.image ?? undefined,
+      },
+    })
+    return existingById.id
+  }
+
+  const existingByEmail = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { id: true },
+  })
+  if (existingByEmail) {
+    await prisma.user.update({
+      where: { id: existingByEmail.id },
+      data: {
+        name: user.name ?? undefined,
+        image: user.image ?? undefined,
+      },
+    })
+    return existingByEmail.id
+  }
+
+  const created = await prisma.user.create({
+    data: {
       id: user.id,
       email: user.email,
       name: user.name ?? undefined,
       image: user.image ?? undefined,
     },
+    select: { id: true },
   })
+  return created.id
 }
 
 export async function getCurrentUserId(): Promise<string | null> {
@@ -123,6 +149,5 @@ export async function requireUserId(): Promise<string> {
     throw new Error('Unauthorized')
   }
 
-  await ensureUserExists(session.user)
-  return session.user.id
+  return ensureUserExists(session.user)
 }

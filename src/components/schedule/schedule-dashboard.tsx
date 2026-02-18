@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 import {
   Clock,
   BookOpen,
@@ -39,6 +39,7 @@ interface ScheduleDashboardProps {
   data: {
     timeBlocks: TimeBlock[]
     weeklyGoals: Goal[]
+    weekStart: Date
     timeAllocation: Record<string, number>
     totalScheduledHours: number
   }
@@ -65,13 +66,19 @@ const typeColors: Record<string, string> = {
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const shortDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+function toDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
   const [selectedDay, setSelectedDay] = useState(new Date().getDay())
 
   // Get current week dates
-  const today = new Date()
-  const startOfWeek = new Date(today)
-  startOfWeek.setDate(today.getDate() - today.getDay())
+  const startOfWeek = new Date(data.weekStart)
+  startOfWeek.setHours(0, 0, 0, 0)
 
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startOfWeek)
@@ -79,14 +86,18 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
     return date
   })
 
-  const getBlocksForDay = (dayOfWeek: number) => {
-    return data.timeBlocks.filter((block) => {
-      const blockDate = new Date(block.date)
-      return blockDate.getDay() === dayOfWeek
-    })
+  const getBlocksForDay = (date: Date) => {
+    const key = toDateKey(date)
+    return data.timeBlocks
+      .filter((block) => toDateKey(new Date(block.date)) === key)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
   }
 
+  const selectedDate = weekDates[selectedDay]
+  const selectedDayBlocks = getBlocksForDay(selectedDate)
+
   // Hours for the schedule grid
+  const rowHeight = 56
   const hours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
 
   return (
@@ -96,7 +107,12 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Weekly Schedule</CardTitle>
-            <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/schedule/new">Add Block</Link>
+            </Button>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex gap-2 min-w-max pt-1">
               {weekDates.map((date, index) => (
                 <Button
                   key={index}
@@ -113,13 +129,14 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative">
+          <div className="relative h-[720px] overflow-y-auto pr-1">
             {/* Time labels */}
             <div className="absolute left-0 top-0 w-16 space-y-0">
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="h-16 text-xs text-muted-foreground pr-2 text-right"
+                  className="text-xs text-muted-foreground pr-2 text-right"
+                  style={{ height: rowHeight }}
                 >
                   {hour.toString().padStart(2, '0')}:00
                 </div>
@@ -127,22 +144,22 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
             </div>
 
             {/* Schedule grid */}
-            <div className="ml-16 relative" style={{ minHeight: hours.length * 64 }}>
+            <div className="ml-16 relative" style={{ minHeight: hours.length * rowHeight }}>
               {/* Hour lines */}
               {hours.map((hour) => (
                 <div
                   key={hour}
                   className="absolute left-0 right-0 border-t border-border"
-                  style={{ top: (hour - 6) * 64 }}
+                  style={{ top: (hour - 6) * rowHeight }}
                 />
               ))}
 
               {/* Time blocks */}
-              {getBlocksForDay(selectedDay).map((block) => {
+              {selectedDayBlocks.map((block) => {
                 const [startHour, startMin] = block.startTime.split(':').map(Number)
                 const [endHour, endMin] = block.endTime.split(':').map(Number)
-                const top = (startHour - 6) * 64 + (startMin / 60) * 64
-                const height = ((endHour - startHour) * 60 + (endMin - startMin)) * (64 / 60)
+                const top = (startHour - 6) * rowHeight + (startMin / 60) * rowHeight
+                const height = ((endHour - startHour) * 60 + (endMin - startMin)) * (rowHeight / 60)
 
                 return (
                   <div
@@ -164,13 +181,13 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
               })}
 
               {/* Empty state */}
-              {getBlocksForDay(selectedDay).length === 0 && (
+              {selectedDayBlocks.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center text-muted-foreground">
                     <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No blocks scheduled for {dayNames[selectedDay]}</p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      Add Time Block
+                    <p className="text-sm">No blocks scheduled for {dayNames[selectedDay]}.</p>
+                    <Button asChild variant="outline" size="sm" className="mt-2">
+                      <Link href="/schedule/new">Add Time Block</Link>
                     </Button>
                   </div>
                 </div>
@@ -182,6 +199,33 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
 
       {/* Sidebar */}
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {dayNames[selectedDay]} Agenda
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {selectedDayBlocks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No blocks for this day.</p>
+            ) : (
+              selectedDayBlocks.map((block) => (
+                <div key={block.id} className="rounded-xl border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{block.title}</p>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {block.category.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {block.startTime} - {block.endTime}
+                  </p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
         {/* Time Allocation */}
         <Card>
           <CardHeader>
@@ -239,22 +283,30 @@ export function ScheduleDashboard({ data }: ScheduleDashboardProps) {
           <CardHeader>
             <CardTitle className="text-lg">Quick Add</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" className="justify-start">
-              <Code className="w-4 h-4 mr-2" />
-              Deep Work
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button asChild variant="outline" size="sm" className="w-full justify-start overflow-hidden px-3">
+              <Link href="/schedule/new?category=deep_work&title=Deep%20Work">
+                <Code className="w-4 h-4 shrink-0 mr-2" />
+                <span className="truncate">Deep Work</span>
+              </Link>
             </Button>
-            <Button variant="outline" size="sm" className="justify-start">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Learning
+            <Button asChild variant="outline" size="sm" className="w-full justify-start overflow-hidden px-3">
+              <Link href="/schedule/new?category=learning&title=Learning%20Session">
+                <BookOpen className="w-4 h-4 shrink-0 mr-2" />
+                <span className="truncate">Learning</span>
+              </Link>
             </Button>
-            <Button variant="outline" size="sm" className="justify-start">
-              <Users className="w-4 h-4 mr-2" />
-              Meeting
+            <Button asChild variant="outline" size="sm" className="w-full justify-start overflow-hidden px-3">
+              <Link href="/schedule/new?category=meetings&title=Meeting">
+                <Users className="w-4 h-4 shrink-0 mr-2" />
+                <span className="truncate">Meeting</span>
+              </Link>
             </Button>
-            <Button variant="outline" size="sm" className="justify-start">
-              <Dumbbell className="w-4 h-4 mr-2" />
-              Exercise
+            <Button asChild variant="outline" size="sm" className="w-full justify-start overflow-hidden px-3">
+              <Link href="/schedule/new?category=exercise&title=Exercise">
+                <Dumbbell className="w-4 h-4 shrink-0 mr-2" />
+                <span className="truncate">Exercise</span>
+              </Link>
             </Button>
           </CardContent>
         </Card>

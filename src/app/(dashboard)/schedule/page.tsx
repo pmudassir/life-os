@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ScheduleDashboard } from '@/components/schedule/schedule-dashboard'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +40,13 @@ async function getScheduleData(userId: string) {
   // Get time blocks and scheduled items
   const [timeBlocks, weeklyGoals] = await Promise.all([
     prisma.timeBlock.findMany({
-      where: { userId },
+      where: {
+        userId,
+        date: {
+          gte: startOfWeek,
+          lt: endOfWeek,
+        },
+      },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     }),
     prisma.goal.findMany({
@@ -62,15 +69,10 @@ async function getScheduleData(userId: string) {
   return {
     timeBlocks: typedBlocks,
     weeklyGoals,
+    weekStart: startOfWeek,
     timeAllocation,
     totalScheduledHours: Object.values(timeAllocation).reduce((a: number, b: number) => a + b, 0),
   }
-}
-
-function calculateDuration(start: string, end: string): number {
-  const [startHour, startMin] = start.split(':').map(Number)
-  const [endHour, endMin] = end.split(':').map(Number)
-  return (endHour * 60 + endMin - startHour * 60 - startMin) / 60
 }
 
 export default async function SchedulePage() {
@@ -91,9 +93,11 @@ export default async function SchedulePage() {
             Plan your week for maximum productivity
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Block
+        <Button asChild>
+          <Link href="/schedule/new">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Block
+          </Link>
         </Button>
       </div>
 
