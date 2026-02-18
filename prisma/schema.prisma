@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Career & Learning Management System - Comprehensive Schema
+// Based on the detailed prompt requirements
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +11,7 @@ datasource db {
 }
 
 // ============================================================================
-// USER
+// CORE USER & SETTINGS
 // ============================================================================
 
 model User {
@@ -20,22 +20,1047 @@ model User {
   name      String?
   image     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  // Career Profile
+  currentRole     String?
+  targetRole      String?
+  yearsExperience Int?
+  bio             String?
+
+  // Relations - All 10 Feature Domains
+  settings          UserSettings?
+  learningResources LearningResource[]
+  learningSessions  LearningSession[]
+  learningNotes     LearningNote[]
+  skills            Skill[]
+  skillProgress     SkillProgress[]
+  projects          Project[]
+  projectGoals      ProjectGoal[]
+  projectMetrics    ProjectMetric[]
+  timeEntries       TimeEntry[]
+  contentIdeas      ContentIdea[]
+  contentPieces     ContentPiece[]
+  weeklyPlans       WeeklyPlan[]
+  timeBlocks        TimeBlock[]
+  dailyFocus        DailyFocus[]
+  goals             Goal[]
+  checkpoints       Checkpoint[]
+  resources         Resource[]
+  weeklyReflections WeeklyReflection[]
+  dailyJournals     DailyJournal[]
+  learningInsights  LearningInsight[]
+  contacts          Contact[]
+  conversations     Conversation[]
+  opportunities     Opportunity[]
+  metricSnapshots   MetricSnapshot[]
+  aiConversations   AIConversation[]
+  aiRecommendations AIRecommendation[]
+  agentTasks        AgentTask[]
+
+  // Legacy (to be migrated)
   dailyRoutines     DailyRoutine[]
   roadmapTopics     RoadmapTopic[]
   dailyPlanners     DailyPlanner[]
-  weeklyReflections WeeklyReflection[]
   habits            Habit[]
 }
 
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Notifications
+  emailNotifications Boolean @default(true)
+  weeklyDigest       Boolean @default(true)
+  aiInsightsEnabled  Boolean @default(true)
+
+  // Theme
+  theme String @default("system") // light, dark, system
+
+  // AI Preferences
+  aiModel        String @default("gpt-4o-mini") // gpt-4o, gpt-4o-mini, claude-3-sonnet
+  aiTemperature  Float  @default(0.7)
+  aiMaxTokens    Int    @default(2000)
+
+  // Learning Preferences
+  defaultReadingPace Int @default(30) // pages per hour
+  studyReminderTime  String @default("09:00")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 // ============================================================================
-// DAILY ROUTINE
+// 1. LEARNING TRACKING
+// ============================================================================
+
+enum ResourceType {
+  BOOK
+  COURSE
+  VIDEO
+  ARTICLE
+  DOCUMENTATION
+  PODCAST
+}
+
+enum ResourceStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+enum ProficiencyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model LearningResource {
+  id          String         @id @default(cuid())
+  userId      String
+  title       String
+  author      String?
+  type        ResourceType
+  status      ResourceStatus @default(NOT_STARTED)
+  url         String?
+  description String?
+
+  // For Books
+  totalPages    Int?
+  currentPage   Int       @default(0)
+  totalChapters Int?
+  currentChapter Int      @default(0)
+
+  // For Courses/Videos
+  totalDuration Int?      // in minutes
+  completedDuration Int   @default(0)
+
+  // Progress tracking
+  startDate   DateTime?
+  completedDate DateTime?
+  targetCompletionDate DateTime?
+
+  // AI Context
+  summary     String?     // AI-generated summary
+  keyConcepts String[]    // Extracted key concepts
+
+  // Priority & Focus
+  priority    Int         @default(0) // 0-10
+  isFocusResource Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions LearningSession[]
+  notes    LearningNote[]
+
+  @@index([userId, status])
+  @@index([userId, type])
+}
+
+model LearningSession {
+  id        String   @id @default(cuid())
+  userId    String
+  resourceId String
+
+  startTime DateTime @default(now())
+  endTime   DateTime?
+  duration  Int      @default(0) // in minutes
+
+  // Progress made in this session
+  pagesRead     Int?
+  chaptersCompleted Int?
+  notes         String?
+
+  // Focus quality
+  focusRating   Int?     @db.SmallInt // 1-5
+  distractions  String[] // What distracted me
+
+  createdAt DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource LearningResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, resourceId])
+  @@index([userId, startTime])
+}
+
+model LearningNote {
+  id         String @id @default(cuid())
+  userId     String
+  resourceId String
+
+  content    String
+  chapter    Int?   // Which chapter this note is for
+  page       Int?   // Which page
+  isKeyIdea  Boolean @default(false) // Highlight as key concept
+
+  // AI-enhanced
+  aiSummary  String?
+  tags       String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource LearningResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, resourceId])
+}
+
+model Skill {
+  id          String @id @default(cuid())
+  userId      String
+
+  name        String
+  category    String // e.g., "Backend", "AI", "Distributed Systems"
+  description String?
+
+  currentLevel ProficiencyLevel @default(BEGINNER)
+  targetLevel  ProficiencyLevel @default(INTERMEDIATE)
+
+  // For skill tree visualization
+  parentSkillId String?
+  order         Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress SkillProgress[]
+
+  @@index([userId, category])
+}
+
+model SkillProgress {
+  id     String @id @default(cuid())
+  userId String
+  skillId String
+
+  level   ProficiencyLevel
+  notes   String?
+  evidence String? // Link to project, blog post, etc.
+
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([userId, skillId])
+}
+
+// ============================================================================
+// 2. PROJECT MANAGEMENT
+// ============================================================================
+
+enum ProjectType {
+  JOB
+  BUSINESS
+  FREELANCE
+  PERSONAL
+  LEARNING
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id          String @id @default(cuid())
+  userId      String
+
+  name        String
+  description String?
+  type        ProjectType
+  status      ProjectStatus @default(PLANNING)
+
+  // Business context
+  clientName  String?   // For freelance
+  hourlyRate  Float?    // For freelance
+  mrrTarget   Float?    // For business (Monthly Recurring Revenue)
+
+  // Timeline
+  startDate   DateTime?
+  targetEndDate DateTime?
+  completedDate DateTime?
+
+  // Metrics
+  totalHoursLogged Float @default(0)
+  estimatedHours   Int?
+
+  // AI Context
+  aiSummary   String?
+  riskLevel   String?   // low, medium, high (AI-assessed)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goals   ProjectGoal[]
+  metrics ProjectMetric[]
+  timeEntries TimeEntry[]
+
+  @@index([userId, type])
+  @@index([userId, status])
+}
+
+model ProjectGoal {
+  id        String @id @default(cuid())
+  userId    String
+  projectId String
+
+  title       String
+  description String?
+  status      String @default("not_started") // not_started, in_progress, completed
+
+  targetDate  DateTime?
+  completedDate DateTime?
+
+  // Success criteria
+  successCriteria String?
+  isMilestone     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
+}
+
+model ProjectMetric {
+  id        String @id @default(cuid())
+  userId    String
+  projectId String
+
+  name        String
+  value       Float
+  targetValue Float?
+  unit        String? // e.g., "users", "revenue", "hours"
+
+  recordedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
+}
+
+model TimeEntry {
+  id        String @id @default(cuid())
+  userId    String
+  projectId String?
+
+  description String
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int @default(0) // in minutes
+
+  // Categorization
+  category    String? // coding, learning, meeting, planning
+  billable    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startTime])
+  @@index([userId, projectId])
+}
+
+// ============================================================================
+// 3. CONTENT CREATION
+// ============================================================================
+
+enum ContentType {
+  LINKEDIN_POST
+  TWITTER_THREAD
+  BLOG_POST
+  VIDEO
+  NEWSLETTER
+  TALK
+}
+
+enum ContentStatus {
+  IDEA
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum ContentPlatform {
+  LINKEDIN
+  TWITTER
+  BLOG
+  YOUTUBE
+  NEWSLETTER
+  CONFERENCE
+}
+
+model ContentIdea {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  description String?
+  type        ContentType
+
+  // Source of inspiration
+  sourceResourceId String? // Linked to learning resource
+  sourceProjectId  String? // Linked to project
+
+  // Status
+  status      String @default("idea") // idea, in_progress, discarded, converted
+  priority    Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model ContentPiece {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  content     String?
+  type        ContentType
+  status      ContentStatus @default(IDEA)
+
+  // Platform
+  platform    ContentPlatform
+  platformUrl String?
+
+  // Scheduling
+  scheduledDate DateTime?
+  publishedDate DateTime?
+
+  // Metrics (updated periodically)
+  views    Int @default(0)
+  likes    Int @default(0)
+  shares   Int @default(0)
+  comments Int @default(0)
+
+  // AI-enhanced
+  aiSuggestions String?
+  performance   String? // high, medium, low (AI-assessed)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, scheduledDate])
+}
+
+// ============================================================================
+// 4. WEEKLY SCHEDULE & PLANNING
+// ============================================================================
+
+model WeeklyPlan {
+  id     String @id @default(cuid())
+  userId String
+
+  weekStartDate DateTime @db.Date // Always Monday
+
+  // Focus areas
+  mainFocus     String?
+  learningGoal  String?
+  projectGoal   String?
+  contentGoal   String?
+
+  // Reflection
+  weekReview    String?
+  rating        Int? @db.SmallInt // 1-5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartDate])
+  @@index([userId, weekStartDate])
+}
+
+model TimeBlock {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  description String?
+
+  // Timing
+  date        DateTime @db.Date
+  startTime   String   // "09:00" format
+  endTime     String   // "10:30" format
+  duration    Int      // in minutes
+
+  // Categorization
+  category    String   // deep_work, learning, meetings, content, exercise, rest
+  color       String   @default("blue")
+
+  // Links
+  projectId   String?
+  resourceId  String?
+
+  // Status
+  completed   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model DailyFocus {
+  id     String @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  // Morning routine
+  morningRoutine Json? // {meditation: true, exercise: false, ...}
+
+  // Core priorities (max 3)
+  priority1   String?
+  priority2   String?
+  priority3   String?
+
+  // Deep work block
+  deepWorkTopic String?
+  deepWorkDuration Int @default(0) // planned minutes
+
+  // Evening
+  reflection  String?
+  tomorrowPrep String?
+
+  // Status tracking
+  completed   Boolean @default(false)
+  dayRating   Int? @db.SmallInt // 1-5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// ============================================================================
+// 5. GOALS & CHECKPOINTS
+// ============================================================================
+
+enum GoalTimeframe {
+  WEEKLY
+  MONTHLY
+  SIX_MONTH
+  TWELVE_MONTH
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+  PARTIALLY_ACHIEVED
+  MISSED
+}
+
+model Goal {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  description String?
+  timeframe   GoalTimeframe
+  status      GoalStatus @default(NOT_STARTED)
+
+  // Success criteria (measurable)
+  successCriteria String?
+  targetValue     Float?
+  currentValue    Float?
+  unit            String?
+
+  // Timeline
+  startDate   DateTime @default(now())
+  targetDate  DateTime
+  completedDate DateTime?
+
+  // Related to
+  projectId   String?
+  skillId     String?
+
+  // AI-enhanced
+  aiSuggestions String?
+  progressAnalysis String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timeframe])
+  @@index([userId, status])
+}
+
+model Checkpoint {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String // "6-Month Checkpoint" or "12-Month Checkpoint"
+  checkpointDate DateTime
+
+  // Success criteria from prompt
+  criteria Json // [{"text": "Can design scalable system...", "achieved": true, "evidence": "..."}]
+
+  overallScore Float? // 0-100
+  summary      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, checkpointDate])
+}
+
+// ============================================================================
+// 6. RESOURCES LIBRARY
+// ============================================================================
+
+enum ResourceCategoryType {
+  COURSE
+  TUTORIAL
+  DOCUMENTATION
+  TOOL
+  COMMUNITY
+  ARTICLE
+  BOOKMARK
+}
+
+model Resource {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  url         String?
+  description String?
+  type        ResourceCategoryType
+
+  // Organization
+  category    String? // custom categories
+  tags        String[]
+
+  // Usage tracking
+  isFavorite  Boolean @default(false)
+  usedInProject String?
+
+  // AI-enhanced
+  aiSummary   String?
+  keyTakeaways String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([userId, category])
+}
+
+// ============================================================================
+// 7. REFLECTION & NOTES
+// ============================================================================
+
+model WeeklyReflection {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime @db.Date // Always Monday
+
+  // Wins and misses
+  wins            String?
+  misses          String?
+  nextWeekFocus   String?
+
+  // Learning reflection
+  learningInsights String?
+  conceptsApplied  String?
+
+  // Project reflection
+  projectProgress  String?
+  blockers         String?
+
+  // Content reflection
+  contentCreated   String?
+  engagementNotes  String?
+
+  // Overall
+  weekRating       Int? @db.SmallInt // 1-5
+  energyLevel      Int? @db.SmallInt // 1-5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartDate])
+  @@index([userId, weekStartDate])
+}
+
+model DailyJournal {
+  id     String @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  // Quick capture
+  morningIntention String?
+  keyInsights      String?
+  challenges       String?
+  gratitude        String?
+
+  // Learning
+  whatILearned     String?
+  questions        String[]
+
+  // Decisions
+  decisionsMade    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model LearningInsight {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  content     String
+
+  // Source
+  resourceId  String?
+  projectId   String?
+
+  // Application
+  appliedTo   String? // How I applied this
+  results     String? // What happened
+
+  // Sharing
+  sharedOn    ContentPlatform[]
+  contentPieceId String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// 8. NETWORK & OPPORTUNITIES
+// ============================================================================
+
+enum ContactType {
+  MENTOR
+  PEER
+  POTENTIAL_CLIENT
+  COLLABORATOR
+  SPEAKER
+  OTHER
+}
+
+enum ConversationType {
+  USER_RESEARCH
+  MENTORSHIP
+  NETWORKING
+  SALES
+  COLLABORATION
+}
+
+enum OpportunityType {
+  FREELANCE
+  SPEAKING
+  PARTNERSHIP
+  JOB
+  INVESTMENT
+}
+
+enum OpportunityStatus {
+  IDENTIFIED
+  CONTACTED
+  IN_DISCUSSION
+  WON
+  LOST
+  ON_HOLD
+}
+
+model Contact {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  email       String?
+  linkedIn    String?
+  twitter     String?
+  company     String?
+  role        String?
+  type        ContactType
+
+  // Relationship
+  howWeMet    String?
+  lastContact DateTime?
+  notes       String?
+
+  // Value tracking
+  valueRating Int? @db.SmallInt // 1-5 (how valuable is this relationship)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([userId, type])
+}
+
+model Conversation {
+  id       String @id @default(cuid())
+  userId   String
+  contactId String
+
+  type        ConversationType
+  date        DateTime @default(now())
+
+  // The 10-conversation framework
+  problemDiscussed    String? // What's the hardest part of [problem]?
+  currentSolution     String? // How are you solving it today?
+  willingnessToPay    String? // Would you pay for X? How much?
+  followUpNeeded      Boolean @default(false)
+  followUpDate        DateTime?
+
+  // Notes
+  notes       String?
+  insights    String[]
+  actionItems String[]
+
+  // Linked to
+  projectId   String? // If this led to a project
+  opportunityId String?
+
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, type])
+}
+
+model Opportunity {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String
+  description String?
+  type        OpportunityType
+  status      OpportunityStatus @default(IDENTIFIED)
+
+  // Value
+  estimatedValue Float?
+  probability    Float? // 0-1
+
+  // Timeline
+  identifiedDate DateTime @default(now())
+  targetCloseDate DateTime?
+  closedDate     DateTime?
+
+  // Related
+  contactId      String?
+
+  // Notes
+  nextSteps      String?
+  blockers       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, type])
+}
+
+// ============================================================================
+// 9. ANALYTICS & INSIGHTS
+// ============================================================================
+
+model MetricSnapshot {
+  id     String @id @default(cuid())
+  userId String
+
+  date   DateTime @db.Date
+
+  // Learning metrics
+  learningHours    Float @default(0)
+  pagesRead        Int   @default(0)
+  resourcesCompleted Int @default(0)
+
+  // Project metrics
+  projectHours     Float @default(0)
+  tasksCompleted   Int   @default(0)
+
+  // Content metrics
+  contentPiecesPublished Int @default(0)
+  totalEngagement        Int   @default(0)
+
+  // Consistency
+  dailyStreak      Int   @default(0)
+  weeklyStreak     Int   @default(0)
+
+  // AI-generated insights
+  aiInsight        String?
+  recommendation   String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// ============================================================================
+// 10. AI FEATURES
+// ============================================================================
+
+model AIConversation {
+  id     String @id @default(cuid())
+  userId String
+
+  // Conversation
+  messages Json[] // [{role: "user" | "assistant", content: string, timestamp: string}]
+
+  // Context
+  contextType String? // "general", "learning", "project", "planning"
+  contextId   String? // ID of related resource/project
+
+  // Metadata
+  summary     String? // AI-generated summary
+  actionItems String[] // Extracted action items
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model AIRecommendation {
+  id     String @id @default(cuid())
+  userId String
+
+  type        String // "learning", "project", "content", "schedule", "general"
+  title       String
+  description String
+
+  // Priority and status
+  priority    Int    @default(0) // 0-10
+  status      String @default("pending") // pending, accepted, dismissed, completed
+
+  // Context
+  reason      String? // Why this recommendation was made
+  sourceData  Json?   // What data led to this
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, type])
+}
+
+model AgentTask {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  description String?
+  status      String @default("pending") // pending, running, completed, failed
+
+  // Schedule
+  schedule    String? // cron expression or "daily", "weekly"
+  lastRun     DateTime?
+  nextRun     DateTime?
+
+  // Task definition
+  taskType    String // "generate_insights", "check_goals", "suggest_content"
+  parameters  Json?
+
+  // Results
+  lastResult  String?
+  lastError   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// ============================================================================
+// LEGACY MODELS (To be migrated)
 // ============================================================================
 
 enum DsaType {
   NONE
   DSA
   SYSTEM
+}
+
+enum TopicCategory {
+  DSA
+  SYSTEM
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum TopicStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+}
+
+enum PlannedTime {
+  THIRTY     @map("30")
+  FORTY_FIVE @map("45")
+  SIXTY      @map("60")
 }
 
 model DailyRoutine {
@@ -76,27 +1101,6 @@ model DailyRoutine {
   @@index([userId, date])
 }
 
-// ============================================================================
-// DSA / SYSTEM DESIGN ROADMAP
-// ============================================================================
-
-enum TopicCategory {
-  DSA
-  SYSTEM
-}
-
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
-enum TopicStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  DONE
-}
-
 model RoadmapTopic {
   id         String        @id @default(cuid())
   userId     String
@@ -115,16 +1119,6 @@ model RoadmapTopic {
   planners DailyPlanner[]
 
   @@index([userId, category, phase])
-}
-
-// ============================================================================
-// DAILY PLANNER (Bridges Roadmap → Daily Execution)
-// ============================================================================
-
-enum PlannedTime {
-  THIRTY     @map("30")
-  FORTY_FIVE @map("45")
-  SIXTY      @map("60")
 }
 
 model DailyPlanner {
@@ -148,33 +1142,6 @@ model DailyPlanner {
   @@unique([userId, date, roadmapTopicId])
   @@index([userId, date])
 }
-
-// ============================================================================
-// WEEKLY REFLECTION
-// ============================================================================
-
-model WeeklyReflection {
-  id            String   @id @default(cuid())
-  userId        String
-  weekStartDate DateTime @db.Date // Always Monday
-
-  wins            String?
-  misses          String?
-  nextWeekFocus   String?
-  faithReflection String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, weekStartDate])
-  @@index([userId, weekStartDate])
-}
-
-// ============================================================================
-// DYNAMIC HABITS (New System)
-// ============================================================================
 
 enum FrequencyType {
   DAILY

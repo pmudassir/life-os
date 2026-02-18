@@ -2,10 +2,10 @@
 
 import { prisma } from '@/lib/prisma'
 import { FrequencyType } from '@prisma/client'
-
-const TEMP_USER_ID = 'temp-user-001'
+import { requireUserId } from '@/lib/auth'
 
 export async function migrateLegacyData() {
+  const userId = await requireUserId()
   console.log('Starting migration...')
 
   // 1. Create Standard Habits if they don't exist
@@ -26,7 +26,7 @@ export async function migrateLegacyData() {
   for (const h of standardHabits) {
     // Check if habit exists
     const existing = await prisma.habit.findFirst({
-        where: { userId: TEMP_USER_ID, title: h.title }
+        where: { userId, title: h.title }
     })
 
     if (existing) {
@@ -36,7 +36,7 @@ export async function migrateLegacyData() {
 
     const habit = await prisma.habit.create({
       data: {
-        userId: TEMP_USER_ID,
+        userId,
         title: h.title,
         section: h.section,
         icon: h.icon,
@@ -49,7 +49,7 @@ export async function migrateLegacyData() {
 
   // 2. Migrate Data
   const routines = await prisma.dailyRoutine.findMany({
-    where: { userId: TEMP_USER_ID }
+    where: { userId }
   })
 
   let migratedCount = 0

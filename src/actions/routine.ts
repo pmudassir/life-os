@@ -6,43 +6,20 @@ import { isDayWin } from '@/lib/utils/day-win'
 import { startOfDay } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 import { DsaType } from '@prisma/client'
-
-// For now, use a hardcoded user ID. Replace with auth when configured.
-const TEMP_USER_ID = 'temp-user-001'
-
-/**
- * Ensure the temp user exists in the database
- */
-async function ensureUserExists() {
-  const existingUser = await prisma.user.findUnique({
-    where: { id: TEMP_USER_ID },
-  })
-
-  if (!existingUser) {
-    await prisma.user.create({
-      data: {
-        id: TEMP_USER_ID,
-        email: 'temp@life-os.dev',
-        name: 'Life OS User',
-      },
-    })
-  }
-}
+import { requireUserId } from '@/lib/auth'
 
 /**
  * Get or create today's routine entry
  */
 export async function getOrCreateTodayRoutine() {
   const today = startOfDay(new Date())
-
-  // Ensure user exists before creating routine
-  await ensureUserExists()
+  const userId = await requireUserId()
 
   // Try to find existing routine for today
   let routine = await prisma.dailyRoutine.findUnique({
     where: {
       userId_date: {
-        userId: TEMP_USER_ID,
+        userId,
         date: today,
       },
     },
@@ -52,7 +29,7 @@ export async function getOrCreateTodayRoutine() {
   if (!routine) {
     routine = await prisma.dailyRoutine.create({
       data: {
-        userId: TEMP_USER_ID,
+        userId,
         date: today,
       },
     })
@@ -69,11 +46,12 @@ export async function getOrCreateTodayRoutine() {
  */
 export async function getRoutineByDate(date: Date) {
   const targetDate = startOfDay(date)
+  const userId = await requireUserId()
   
   const routine = await prisma.dailyRoutine.findUnique({
     where: {
       userId_date: {
-        userId: TEMP_USER_ID,
+        userId,
         date: targetDate,
       },
     },
@@ -95,19 +73,20 @@ export async function updateRoutineField(
   value: boolean | number | string | DsaType | null
 ) {
   const today = startOfDay(new Date())
+  const userId = await requireUserId()
 
   const validated = updateDailyRoutineSchema.parse({ [field]: value })
 
   const routine = await prisma.dailyRoutine.upsert({
     where: {
       userId_date: {
-        userId: TEMP_USER_ID,
+        userId,
         date: today,
       },
     },
     update: validated,
     create: {
-      userId: TEMP_USER_ID,
+      userId,
       date: today,
       ...validated,
     },
@@ -126,7 +105,16 @@ export async function updateRoutineField(
  * Update multiple fields on a routine
  */
 export async function updateRoutine(routineId: string, data: UpdateDailyRoutineInput) {
+  const userId = await requireUserId()
   const validated = updateDailyRoutineSchema.parse(data)
+
+  const existing = await prisma.dailyRoutine.findFirst({
+    where: { id: routineId, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw new Error('Routine not found')
+  }
 
   const routine = await prisma.dailyRoutine.update({
     where: { id: routineId },
@@ -146,13 +134,14 @@ export async function updateRoutine(routineId: string, data: UpdateDailyRoutineI
  * Get routines for the current week (for streak calculation)
  */
 export async function getRecentRoutines(days: number = 14) {
+  const userId = await requireUserId()
   const endDate = startOfDay(new Date())
   const startDate = new Date(endDate)
   startDate.setDate(startDate.getDate() - days)
 
   const routines = await prisma.dailyRoutine.findMany({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       date: {
         gte: startDate,
         lte: endDate,
@@ -171,9 +160,10 @@ export async function getRecentRoutines(days: number = 14) {
  * Get week's routines for the week view
  */
 export async function getWeekRoutines(weekStart: Date, weekEnd: Date) {
+  const userId = await requireUserId()
   const routines = await prisma.dailyRoutine.findMany({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       date: {
         gte: startOfDay(weekStart),
         lte: startOfDay(weekEnd),
@@ -192,13 +182,14 @@ export async function getWeekRoutines(weekStart: Date, weekEnd: Date) {
  * Get missed days (prayers incomplete OR DSA skipped)
  */
 export async function getMissedDays(limit: number = 30) {
+  const userId = await requireUserId()
   const endDate = startOfDay(new Date())
   const startDate = new Date(endDate)
   startDate.setDate(startDate.getDate() - limit)
 
   const routines = await prisma.dailyRoutine.findMany({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       date: {
         gte: startDate,
         lt: endDate, // Exclude today

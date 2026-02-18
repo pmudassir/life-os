@@ -4,9 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { startOfDay, getDay } from 'date-fns'
 import { FrequencyType } from '@prisma/client'
-
-// Use the same temp user ID as routine.ts
-const TEMP_USER_ID = 'temp-user-001'
+import { requireUserId } from '@/lib/auth'
 
 export type CreateHabitInput = {
   title: string
@@ -22,9 +20,11 @@ export type CreateHabitInput = {
  * Create a new habit
  */
 export async function createHabit(data: CreateHabitInput) {
+  const userId = await requireUserId()
+
   const habit = await prisma.habit.create({
     data: {
-      userId: TEMP_USER_ID,
+      userId,
       title: data.title,
       description: data.description,
       icon: data.icon,
@@ -45,7 +45,16 @@ export async function createHabit(data: CreateHabitInput) {
  * Toggle habit completion for a specific date
  */
 export async function toggleHabit(habitId: string, date: Date, completed: boolean) {
+  const userId = await requireUserId()
   const targetDate = startOfDay(date)
+
+  const habit = await prisma.habit.findFirst({
+    where: { id: habitId, userId },
+    select: { id: true },
+  })
+  if (!habit) {
+    throw new Error('Habit not found')
+  }
 
   const log = await prisma.habitLog.upsert({
     where: {
@@ -72,13 +81,14 @@ export async function toggleHabit(habitId: string, date: Date, completed: boolea
  * Get all habits for the user, including today's status
  */
 export async function getDayHabits(date: Date) {
+  const userId = await requireUserId()
   const targetDate = startOfDay(date)
   const dayOfWeek = getDay(targetDate) // 0 = Sun, 6 = Sat
 
   // Fetch all enabled habits
   const allHabits = await prisma.habit.findMany({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       archived: false,
     },
     include: {
@@ -112,13 +122,14 @@ export async function getDayHabits(date: Date) {
  * Get days with incomplete habits (last 30 days)
  */
 export async function getMissedHabitDays(limit: number = 30) {
+  const userId = await requireUserId()
   const endDate = startOfDay(new Date())
   const startDate = new Date(endDate)
   startDate.setDate(startDate.getDate() - limit)
 
   // Fetch all habits and their logs for the range
   const habits = await prisma.habit.findMany({
-    where: { userId: TEMP_USER_ID, archived: false },
+    where: { userId, archived: false },
     include: {
       logs: {
         where: {

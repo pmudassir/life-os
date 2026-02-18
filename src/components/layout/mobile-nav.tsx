@@ -4,13 +4,29 @@ import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Calendar, AlertCircle, Map, LayoutGrid } from 'lucide-react'
+import { 
+  Calendar, 
+  AlertCircle, 
+  Map, 
+  LayoutGrid, 
+  BookOpen, 
+  Briefcase, 
+  Target,
+  Sparkles,
+  FileText,
+  Clock,
+  Users
+} from 'lucide-react'
 
 const navItems = [
   { href: '/', icon: LayoutGrid, label: 'Today' },
-  { href: '/week', icon: Calendar, label: 'Week' },
-  { href: '/missed', icon: AlertCircle, label: 'Missed' },
-  { href: '/roadmap', icon: Map, label: 'Roadmap' },
+  { href: '/learning', icon: BookOpen, label: 'Learn' },
+  { href: '/projects', icon: Briefcase, label: 'Projects' },
+  { href: '/goals', icon: Target, label: 'Goals' },
+  { href: '/content', icon: FileText, label: 'Content' },
+  { href: '/schedule', icon: Clock, label: 'Schedule' },
+  { href: '/network', icon: Users, label: 'Network' },
+  { href: '/insights', icon: Sparkles, label: 'Insights' },
 ]
 
 /**

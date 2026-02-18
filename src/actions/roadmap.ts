@@ -9,17 +9,16 @@ import {
 } from '@/lib/validators'
 import { revalidatePath } from 'next/cache'
 import { TopicCategory, TopicStatus } from '@prisma/client'
-
-// Temporary user ID until auth is set up
-const TEMP_USER_ID = 'temp-user-001'
+import { requireUserId } from '@/lib/auth'
 
 /**
  * Get all roadmap topics grouped by phase
  */
 export async function getRoadmapTopics(category?: TopicCategory) {
+  const userId = await requireUserId()
   const where = category 
-    ? { userId: TEMP_USER_ID, category } 
-    : { userId: TEMP_USER_ID }
+    ? { userId, category } 
+    : { userId }
 
   const topics = await prisma.roadmapTopic.findMany({
     where,
@@ -46,8 +45,9 @@ export async function getRoadmapTopics(category?: TopicCategory) {
  * Get a single roadmap topic
  */
 export async function getRoadmapTopic(id: string) {
-  return prisma.roadmapTopic.findUnique({
-    where: { id },
+  const userId = await requireUserId()
+  return prisma.roadmapTopic.findFirst({
+    where: { id, userId },
   })
 }
 
@@ -55,12 +55,13 @@ export async function getRoadmapTopic(id: string) {
  * Create a new roadmap topic
  */
 export async function createRoadmapTopic(data: CreateRoadmapTopicInput) {
+  const userId = await requireUserId()
   const validated = createRoadmapTopicSchema.parse(data)
 
   const topic = await prisma.roadmapTopic.create({
     data: {
       ...validated,
-      userId: TEMP_USER_ID,
+      userId,
     },
   })
 
@@ -72,7 +73,16 @@ export async function createRoadmapTopic(data: CreateRoadmapTopicInput) {
  * Update a roadmap topic
  */
 export async function updateRoadmapTopic(id: string, data: UpdateRoadmapTopicInput) {
+  const userId = await requireUserId()
   const validated = updateRoadmapTopicSchema.parse(data)
+
+  const existing = await prisma.roadmapTopic.findFirst({
+    where: { id, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw new Error('Topic not found')
+  }
 
   const topic = await prisma.roadmapTopic.update({
     where: { id },
@@ -101,6 +111,15 @@ export async function completeTopic(id: string) {
  * Delete a roadmap topic
  */
 export async function deleteRoadmapTopic(id: string) {
+  const userId = await requireUserId()
+  const existing = await prisma.roadmapTopic.findFirst({
+    where: { id, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw new Error('Topic not found')
+  }
+
   await prisma.roadmapTopic.delete({
     where: { id },
   })
@@ -112,10 +131,11 @@ export async function deleteRoadmapTopic(id: string) {
  * Get the next topic to work on (first in-progress, then first not-started)
  */
 export async function getNextTopic(category?: TopicCategory) {
+  const userId = await requireUserId()
   // First, check for in-progress topics
   const inProgress = await prisma.roadmapTopic.findFirst({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       status: TopicStatus.IN_PROGRESS,
       ...(category ? { category } : {}),
     },
@@ -127,7 +147,7 @@ export async function getNextTopic(category?: TopicCategory) {
   // Otherwise, get the first not-started topic
   return prisma.roadmapTopic.findFirst({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       status: TopicStatus.NOT_STARTED,
       ...(category ? { category } : {}),
     },

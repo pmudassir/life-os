@@ -9,19 +9,18 @@ import {
 } from '@/lib/validators'
 import { startOfDay } from 'date-fns'
 import { revalidatePath } from 'next/cache'
-
-// Temporary user ID until auth is set up
-const TEMP_USER_ID = 'temp-user-001'
+import { requireUserId } from '@/lib/auth'
 
 /**
  * Get today's planner entry with its roadmap topic
  */
 export async function getTodayPlanner() {
+  const userId = await requireUserId()
   const today = startOfDay(new Date())
 
   const planner = await prisma.dailyPlanner.findFirst({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       date: today,
     },
     include: {
@@ -36,11 +35,12 @@ export async function getTodayPlanner() {
  * Get planner for a specific date
  */
 export async function getPlannerByDate(date: Date) {
+  const userId = await requireUserId()
   const targetDate = startOfDay(date)
 
   const planner = await prisma.dailyPlanner.findFirst({
     where: {
-      userId: TEMP_USER_ID,
+      userId,
       date: targetDate,
     },
     include: {
@@ -55,13 +55,22 @@ export async function getPlannerByDate(date: Date) {
  * Create a daily planner entry
  */
 export async function createDailyPlanner(data: CreateDailyPlannerInput) {
+  const userId = await requireUserId()
   const validated = createDailyPlannerSchema.parse(data)
+
+  const topic = await prisma.roadmapTopic.findFirst({
+    where: { id: validated.roadmapTopicId, userId },
+    select: { id: true },
+  })
+  if (!topic) {
+    throw new Error('Roadmap topic not found')
+  }
 
   const planner = await prisma.dailyPlanner.create({
     data: {
       ...validated,
       date: startOfDay(validated.date),
-      userId: TEMP_USER_ID,
+      userId,
     },
     include: {
       roadmapTopic: true,
@@ -76,7 +85,16 @@ export async function createDailyPlanner(data: CreateDailyPlannerInput) {
  * Update a daily planner entry
  */
 export async function updateDailyPlanner(id: string, data: UpdateDailyPlannerInput) {
+  const userId = await requireUserId()
   const validated = updateDailyPlannerSchema.parse(data)
+
+  const existing = await prisma.dailyPlanner.findFirst({
+    where: { id, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw new Error('Planner entry not found')
+  }
 
   const planner = await prisma.dailyPlanner.update({
     where: { id },
@@ -104,6 +122,15 @@ export async function completeTodayPlanner() {
  * Delete a daily planner entry
  */
 export async function deleteDailyPlanner(id: string) {
+  const userId = await requireUserId()
+  const existing = await prisma.dailyPlanner.findFirst({
+    where: { id, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw new Error('Planner entry not found')
+  }
+
   await prisma.dailyPlanner.delete({
     where: { id },
   })
